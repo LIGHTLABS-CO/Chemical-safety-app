@@ -1,0 +1,91 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Chemical Safety Lookup</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f6f8;
+      margin: 0;
+      padding: 2rem;
+      color: #333;
+    }
+    .container {
+      max-width: 600px;
+      margin: auto;
+      background: #fff;
+      padding: 2rem;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      border-radius: 8px;
+    }
+    h1 {
+      text-align: center;
+      color: #005faa;
+    }
+    label, input, button {
+      width: 100%;
+      margin-top: 1rem;
+    }
+    input {
+      padding: 0.5rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    button {
+      padding: 0.7rem;
+      background: #005faa;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 1rem;
+    }
+    .result {
+      margin-top: 2rem;
+      padding: 1rem;
+      background: #e6f0ff;
+      border-left: 5px solid #005faa;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Chemical Safety Lookup</h1>
+    <label for="chemical">Enter Chemical Name:</label>
+    <input type="text" id="chemical" placeholder="e.g., Benzene" />
+    <button onclick="lookup()">Lookup</button>
+    <div id="result" class="result" style="display:none;"></div>
+  </div>
+  <script>
+    const data = {
+      benzene: {
+        danger: "Carcinogenic. Highly flammable.",
+        handling: "Use in ventilated areas, wear gloves and mask."
+      },
+      toluene: {
+        danger: "Flammable. May cause dizziness.",
+        handling: "Avoid inhalation. Use protective equipment."
+      },
+      methanol: {
+        danger: "Toxic if ingested. Flammable.",
+        handling: "Use in fume hood. Avoid skin contact."
+      }
+    };
+
+    function lookup() {
+      const name = document.getElementById('chemical').value.toLowerCase();
+      const result = document.getElementById('result');
+      if (data[name]) {
+        result.innerHTML = `<strong>Hazards:</strong> ${data[name].danger}<br><strong>Handling:</strong> ${data[name].handling}`;
+        result.style.display = "block";
+      } else {
+        result.innerHTML = "Chemical not found.";
+        result.style.display = "block";
+      }
+    }
+  </script>
+</body>
+  </html>

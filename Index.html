@@ -1,89 +1,36 @@
-<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html><html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>LightLabs Co. – Chemical Hazard AI</title>
   <style>
-    body {
-      font-family: 'Segoe UI', sans-serif;
-      padding: 2em;
-      background: #f4f7fa;
-      max-width: 700px;
-      margin: auto;
-    }
-    h1 {
-      color: #222;
-    }
-    label {
-      display: block;
-      margin-top: 1.5em;
-      font-weight: bold;
-    }
-    input {
-      padding: 0.6em;
-      width: 100%;
-      margin-top: 0.5em;
-      border-radius: 5px;
-      border: 1px solid #ccc;
-      font-size: 1em;
-    }
-    button {
-      margin-top: 2em;
-      padding: 0.7em 1.5em;
-      background-color: #007bff;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      font-size: 1em;
-    }
-    button:hover {
-      background-color: #0056b3;
-    }
-    #result {
-      margin-top: 2em;
-      white-space: pre-wrap;
-      background: #fff;
-      padding: 1em;
-      border-radius: 6px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    }
-    footer {
-      margin-top: 3em;
-      text-align: center;
-      font-size: 0.9em;
-      color: #888;
-    }
+    body { font-family: 'Segoe UI', sans-serif; padding: 2em; background: #f4f7fa; }
+    h1 { color: #333; }
+    #result { margin-top: 1em; white-space: pre-wrap; background: #fff; padding: 1em; border-radius: 5px; }
+    button { margin-top: 1em; padding: 0.5em 1em; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+    button:hover { background-color: #0056b3; }
+    input { padding: 0.5em; width: 60%; border-radius: 4px; border: 1px solid #ccc; margin-top: 0.5em; }
+    label { display: block; margin-top: 1em; }
   </style>
 </head>
 <body>
-  <h1>⚡ LightLabs Co. – Chemical Hazard AI Assistant</h1>
+  <h1>⚡ LightLabs Co. – Chemical Hazard AI Assistant</h1><label for="apiKeyInput">Enter your Hugging Face API Key:</label> <input type="text" id="apiKeyInput" placeholder="hf_xxx..." />
 
-  <label for="apiKey">🔑 OpenAI API Key</label>
-  <input type="password" id="apiKey" placeholder="sk-... or sk-proj-..." />
+<label for="chemicalInput">Enter a chemical name:</label> <input type="text" id="chemicalInput" placeholder="e.g., Benzene" />
 
-  <label for="chemicalInput">🧪 Chemical Name</label>
-  <input type="text" id="chemicalInput" placeholder="e.g., Benzene" />
+<button onclick="analyze()">Analyze Hazard</button>
 
-  <button onclick="analyze()">Analyze Hazard</button>
-
-  <div id="result"></div>
-
-  <footer>ⓒ ⟦ Lі𝓰нтнσυѕе ⟧ ⌬ ʟᴀʙѕ ⌬ | Built by Lighthouse</footer>
-
-  <script>
+  <div id="result"></div>  <script>
     async function analyze() {
-      const apiKey = document.getElementById('apiKey').value.trim();
+      const apiKey = document.getElementById('apiKeyInput').value.trim();
       const chemical = document.getElementById('chemicalInput').value.trim();
       const resultDiv = document.getElementById('result');
+      resultDiv.textContent = "Analyzing... please wait.";
 
       if (!apiKey || !chemical) {
-        resultDiv.textContent = "Please enter both the API key and a chemical name.";
+        resultDiv.textContent = "Please provide both API key and chemical name.";
         return;
       }
-
-      resultDiv.textContent = "Analyzing... please wait.";
 
       const prompt = `Explain the hazards, industrial use, and safety protocols for the chemical: ${chemical}. Make it detailed.`;
 
@@ -102,15 +49,17 @@
         });
 
         const data = await response.json();
+
         if (data.choices && data.choices[0]) {
           resultDiv.textContent = data.choices[0].message.content;
+        } else if (data.error && data.error.message) {
+          resultDiv.textContent = `Error: ${data.error.message}`;
         } else {
-          resultDiv.textContent = "No response. Check your API key or try again later.";
+          resultDiv.textContent = "Unexpected error. Try again later.";
         }
-      } catch (err) {
-        resultDiv.textContent = "Error contacting OpenAI API. Possibly a network or key issue.";
+      } catch (error) {
+        resultDiv.textContent = "Network error or invalid API key.";
       }
     }
-  </script>
-</body>
+  </script></body>
 </html>

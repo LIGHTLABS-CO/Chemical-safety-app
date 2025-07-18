@@ -45,10 +45,10 @@
 
       resultDiv.textContent = "🔍 Analyzing... please wait.";
 
-      const prompt = `Explain the hazards, industrial use, and safety protocols for the chemical: ${chemical}. Make it detailed.`;
+      const prompt = `Explain the hazards, industrial uses, and safety protocols for the chemical: ${chemical}. Be detailed.`;
 
       try {
-        const response = await fetch("https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.1", {
+        const response = await fetch("https://api-inference.huggingface.co/models/tiiuae/falcon-7b-instruct", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -58,10 +58,13 @@
         });
 
         const data = await response.json();
-        if (data && data[0] && data[0].generated_text) {
+
+        if (Array.isArray(data) && data[0]?.generated_text) {
           resultDiv.textContent = data[0].generated_text;
+        } else if (data?.generated_text) {
+          resultDiv.textContent = data.generated_text;
         } else {
-          resultDiv.textContent = "⚠️ Failed to get response. Check API key or try again.";
+          resultDiv.textContent = "⚠️ Failed to get response. Response format unrecognized.";
         }
       } catch (err) {
         resultDiv.textContent = "❌ Error: " + err.message;

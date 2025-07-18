@@ -5,43 +5,85 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>LightLabs Co. – Chemical Hazard AI</title>
   <style>
-    body { font-family: 'Segoe UI', sans-serif; padding: 2em; background: #f4f7fa; }
-    h1 { color: #333; }
-    #result { margin-top: 1em; white-space: pre-wrap; background: #fff; padding: 1em; border-radius: 5px; }
-    button { margin-top: 1em; padding: 0.5em 1em; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
-    button:hover { background-color: #0056b3; }
-    input { padding: 0.5em; width: 60%; border-radius: 4px; border: 1px solid #ccc; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      padding: 2em;
+      background: #f4f7fa;
+      max-width: 700px;
+      margin: auto;
+    }
+    h1 {
+      color: #222;
+    }
+    label {
+      display: block;
+      margin-top: 1.5em;
+      font-weight: bold;
+    }
+    input {
+      padding: 0.6em;
+      width: 100%;
+      margin-top: 0.5em;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      font-size: 1em;
+    }
+    button {
+      margin-top: 2em;
+      padding: 0.7em 1.5em;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 1em;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    #result {
+      margin-top: 2em;
+      white-space: pre-wrap;
+      background: #fff;
+      padding: 1em;
+      border-radius: 6px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    footer {
+      margin-top: 3em;
+      text-align: center;
+      font-size: 0.9em;
+      color: #888;
+    }
   </style>
 </head>
 <body>
   <h1>⚡ LightLabs Co. – Chemical Hazard AI Assistant</h1>
-  <p>Enter a chemical name:</p>
+
+  <label for="apiKey">🔑 OpenAI API Key</label>
+  <input type="password" id="apiKey" placeholder="sk-... or sk-proj-..." />
+
+  <label for="chemicalInput">🧪 Chemical Name</label>
   <input type="text" id="chemicalInput" placeholder="e.g., Benzene" />
-  <br/>
+
   <button onclick="analyze()">Analyze Hazard</button>
+
   <div id="result"></div>
 
-  <script>
-    let userApiKey = null;
+  <footer>ⓒ ⟦ Lі𝓰нтнσυѕе ⟧ ⌬ ʟᴀʙѕ ⌬ | Built by Lighthouse</footer>
 
+  <script>
     async function analyze() {
+      const apiKey = document.getElementById('apiKey').value.trim();
       const chemical = document.getElementById('chemicalInput').value.trim();
       const resultDiv = document.getElementById('result');
-      resultDiv.textContent = "Analyzing... please wait.";
 
-      if (!chemical) {
-        resultDiv.textContent = "Please enter a chemical name.";
+      if (!apiKey || !chemical) {
+        resultDiv.textContent = "Please enter both the API key and a chemical name.";
         return;
       }
 
-      // Ask for API key if not already set
-      if (!userApiKey) {
-        userApiKey = prompt("Enter your OpenAI API Key:");
-        if (!userApiKey) {
-          resultDiv.textContent = "API Key is required to continue.";
-          return;
-        }
-      }
+      resultDiv.textContent = "Analyzing... please wait.";
 
       const prompt = `Explain the hazards, industrial use, and safety protocols for the chemical: ${chemical}. Make it detailed.`;
 
@@ -50,7 +92,7 @@
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${userApiKey}`,
+            "Authorization": `Bearer ${apiKey}`,
           },
           body: JSON.stringify({
             model: "gpt-3.5-turbo",
@@ -63,10 +105,10 @@
         if (data.choices && data.choices[0]) {
           resultDiv.textContent = data.choices[0].message.content;
         } else {
-          resultDiv.textContent = "Error retrieving data. Try again.";
+          resultDiv.textContent = "No response. Check your API key or try again later.";
         }
-      } catch (error) {
-        resultDiv.textContent = "Request failed. Check your API key and internet connection.";
+      } catch (err) {
+        resultDiv.textContent = "Error contacting OpenAI API. Possibly a network or key issue.";
       }
     }
   </script>

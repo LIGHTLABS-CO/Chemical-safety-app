@@ -11,46 +11,67 @@
 <body>
   <h2>⚗️ LightLabs Co. – Chemical Hazard AI</h2>
 
-  <input type="text" id="chemical" placeholder="Enter chemical name (e.g., Benzene)" />
+  <input type="text" id="chemical" placeholder="Enter chemical name or keyword (e.g., potassium)" />
   <button onclick="analyze()">Analyze</button>
   <div id="result"></div>
 
   <script>
+    function levenshtein(a, b) {
+      const dp = Array.from({ length: a.length + 1 }, () => Array(b.length + 1).fill(0));
+      for (let i = 0; i <= a.length; i++) dp[i][0] = i;
+      for (let j = 0; j <= b.length; j++) dp[0][j] = j;
+
+      for (let i = 1; i <= a.length; i++) {
+        for (let j = 1; j <= b.length; j++) {
+          if (a[i - 1] === b[j - 1]) {
+            dp[i][j] = dp[i - 1][j - 1];
+          } else {
+            dp[i][j] = 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+          }
+        }
+      }
+      return dp[a.length][b.length];
+    }
+
     async function analyze() {
-      const chemical = document.getElementById('chemical').value.trim().toLowerCase();
+      const keyword = document.getElementById('chemical').value.trim().toLowerCase();
       const resultDiv = document.getElementById('result');
 
-      if (!chemical) {
-        resultDiv.textContent = "Please enter a chemical name.";
+      if (!keyword) {
+        resultDiv.textContent = "Please enter a chemical name or keyword.";
         return;
       }
 
-      resultDiv.textContent = "Loading...";
+      resultDiv.textContent = "Analyzing...";
 
       try {
         const response = await fetch("answer.txt");
-        if (!response.ok) {
-          throw new Error("Unable to load answer.txt");
-        }
-
         const text = await response.text();
-        const lines = text.split('\n');
 
-        let found = null;
-        for (let line of lines) {
-          const [key, ...descParts] = line.split(":");
-          if (key.trim().toLowerCase() === chemical) {
-            found = descParts.join(":").trim();
-            break;
+        // Split each entry by line starting with "Chemical: Something: Hazards:"
+        const entries = text.split(/\n?\s*(?=[^\n]+: Hazards:)/);
+        const scores = [];
+
+        for (const entry of entries) {
+          const name = entry.split(": Hazards:")[0].trim().toLowerCase();
+          const distance = levenshtein(keyword, name);
+          const similarity = 1 - distance / Math.max(keyword.length, name.length);
+          if (name.includes(keyword) || similarity > 0.65) {
+            scores.push({ similarity, entry });
           }
         }
 
-        resultDiv.textContent = found 
-          ? `✔️ ${chemical.charAt(0).toUpperCase() + chemical.slice(1)}:\n${found}` 
-          : `❌ No data found for "${chemical}". Check spelling or update answer.txt.`;
+        scores.sort((a, b) => b.similarity - a.similarity);
+        const topMatches = scores.slice(0, 5).map(m => m.entry.trim());
 
-      } catch (err) {
-        resultDiv.textContent = "❌ Error: " + err.message;
+        if (topMatches.length > 0) {
+          resultDiv.textContent = topMatches.join("\n\n----------------------------------------\n\n");
+        } else {
+          resultDiv.textContent = `❌ No data found matching "${keyword}". Try a different term.`;
+        }
+
+      } catch (error) {
+        resultDiv.textContent = `❌ Error reading answer.txt: ${error.message}`;
       }
     }
   </script>

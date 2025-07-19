@@ -7,9 +7,41 @@
   <script>
     async function fetchWeather(base) {
       const coords = {
-        baseA: { lat: 5.517, lon: 5.750 }, // Warri South
-        baseB: { lat: 5.570, lon: 5.820 }  // Ekpan
-      };const { lat, lon } = coords[base];
+        baseA: { lat: 5.517, lon: 5.750 },
+        baseB: { lat: 5.570, lon: 5.820 }
+      };
+      const { lat, lon } = coords[base];
+      const apiKey = '7ce545e8426a719062d9f8a7795d1e56';
+      const weatherURL = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric`;
+      const forecastURL = `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric`;async function update() {
+    const weatherRes = await fetch(weatherURL);
+    const forecastRes = await fetch(forecastURL);
+    const weatherData = await weatherRes.json();
+    const forecastData = await forecastRes.json();
+
+    document.getElementById('base-name').textContent = base === 'baseA' ? 'Chevron Base A – Warri South' : 'Chevron Base B – Ekpan';
+    document.getElementById('temp').textContent = `${weatherData.main.temp} °C`;
+    document.getElementById('humidity').textContent = `${weatherData.main.humidity}%`;
+    document.getElementById('wind').textContent = `${weatherData.wind.speed} km/h`;
+    document.getElementById('condition').textContent = weatherData.weather[0].description;
+
+    const forecastContainer = document.getElementById('forecast');
+    forecastContainer.innerHTML = '';
+    forecastData.list.slice(0, 6).forEach(item => {
+      const el = document.createElement('div');
+      el.className = 'bg-blue-100 rounded p-2 text-sm';
+      el.innerHTML = `<strong>${item.dt_txt.slice(11, 16)}</strong>: ${item.weather[0].description}, ${item.main.temp}°C`;
+      forecastContainer.appendChild(el);
+    });
+  }
+
+  update();
+  setInterval(update, 1000); // Auto-refresh every second
+}, // Warri South
+    baseB: { lat: 5.570, lon: 5.820 }  // Ekpan
+  };
+
+  const { lat, lon } = coords[base];
   const apiKey = '7ce545e8426a719062d9f8a7795d1e56';
   const weatherURL = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric`;
   const forecastURL = `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric`;
@@ -72,4 +104,4 @@
 
   </div>
 </body>
-</html>
+      </html>

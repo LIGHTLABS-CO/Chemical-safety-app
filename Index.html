@@ -4,8 +4,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Chevron Base Environmental Monitor</title>
   <script defer>
-    let refreshInterval;function fetchWeather(base) {
-  clearInterval(refreshInterval); // Clear previous interval
+    let refreshInterval;
+    let countdownInterval;
+    let nextUpdateTime = 600;function fetchWeather(base) {
+  clearInterval(refreshInterval);
+  clearInterval(countdownInterval);
+  nextUpdateTime = 600;
 
   const coords = {
     baseA: { lat: 5.517, lon: 5.750 },
@@ -24,9 +28,10 @@
       const forecastData = await forecastRes.json();
 
       document.getElementById('base-name').textContent = base === 'baseA' ? 'Chevron Base A – Warri South' : 'Chevron Base B – Ekpan';
-      document.getElementById('temp').textContent = `${weatherData.main.temp} °C`;
-      document.getElementById('humidity').textContent = `${weatherData.main.humidity}%`;
-      document.getElementById('wind').textContent = `${weatherData.wind.speed} km/h`;
+
+      animateValue('temp', weatherData.main.temp, '°C');
+      animateValue('humidity', weatherData.main.humidity, '%');
+      animateValue('wind', weatherData.wind.speed, 'km/h');
       document.getElementById('condition').textContent = weatherData.weather[0].description;
 
       const forecastContainer = document.getElementById('forecast');
@@ -42,31 +47,76 @@
     }
   }
 
+  function animateValue(id, end, unit = '') {
+    const el = document.getElementById(id);
+    let start = parseFloat(el.textContent) || 0;
+    const duration = 800;
+    const stepTime = 20;
+    const steps = duration / stepTime;
+    const increment = (end - start) / steps;
+    let step = 0;
+
+    const timer = setInterval(() => {
+      step++;
+      const val = start + increment * step;
+      el.textContent = val.toFixed(1) + ' ' + unit;
+      if (step >= steps) clearInterval(timer);
+    }, stepTime);
+  }
+
+  function updateCountdown() {
+    const el = document.getElementById('countdown');
+    countdownInterval = setInterval(() => {
+      if (nextUpdateTime <= 0) {
+        clearInterval(countdownInterval);
+        nextUpdateTime = 600;
+      }
+      const mins = Math.floor(nextUpdateTime / 60);
+      const secs = nextUpdateTime % 60;
+      el.textContent = `Next update in: ${mins}m ${secs}s`;
+      nextUpdateTime--;
+    }, 1000);
+  }
+
   update();
-  refreshInterval = setInterval(update, 1000); // Auto-refresh every second
+  updateCountdown();
+  refreshInterval = setInterval(() => {
+    update();
+    nextUpdateTime = 600;
+  }, 600000); // every 10 minutes
 }
 
   </script>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100 font-sans">
-  <div class="max-w-2xl mx-auto mt-10 p-6 bg-white shadow rounded">
-    <h1 class="text-2xl font-bold mb-4">Chevron Base Environmental Monitor</h1>
+  <div class="max-w-2xl mx-auto mt-10 p-6 bg-white shadow rounded animate-pulse">
+    <h1 class="text-2xl font-bold mb-4 animate-fade-in">Chevron Base Environmental Monitor</h1>
     <div class="flex space-x-4 mb-6">
-      <button onclick="fetchWeather('baseA')" class="px-4 py-2 bg-blue-500 text-white rounded">Monitor Base A – Warri South</button>
-      <button onclick="fetchWeather('baseB')" class="px-4 py-2 bg-green-500 text-white rounded">Monitor Base B – Ekpan</button>
+      <button onclick="fetchWeather('baseA')" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition">Monitor Base A – Warri South</button>
+      <button onclick="fetchWeather('baseB')" class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition">Monitor Base B – Ekpan</button>
     </div>
-    <div class="bg-gray-50 p-4 rounded shadow">
+    <div class="bg-gray-50 p-4 rounded shadow animate-fade-in">
       <h2 id="base-name" class="text-xl font-semibold mb-2">No base selected</h2>
       <p><strong>Temperature:</strong> <span id="temp">--</span></p>
       <p><strong>Humidity:</strong> <span id="humidity">--</span></p>
       <p><strong>Wind Speed:</strong> <span id="wind">--</span></p>
       <p><strong>Condition:</strong> <span id="condition">--</span></p>
+      <p id="countdown" class="mt-2 text-sm text-gray-600 italic">Next update in: --</p>
     </div>
     <div class="mt-6">
       <h3 class="text-lg font-bold mb-2">Forecast</h3>
       <div id="forecast" class="grid grid-cols-2 gap-2"></div>
     </div>
   </div>
+  <style>
+    .animate-fade-in {
+      animation: fadeIn 0.8s ease-in forwards;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
 </body>
 </html>

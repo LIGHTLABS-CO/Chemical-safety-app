@@ -1,0 +1,29 @@
+/* style.css - Professional and animated styling for Lighthouse Labs Weather Monitor */
+
+body { background: #f4f6f8; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #222; margin: 0; padding: 0; animation: fadeIn 1.2s ease-in; }
+
+/* Banner */ .banner { background: linear-gradient(to right, #0f172a, #2563eb); padding: 2rem 1rem; text-align: center; color: white; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); font-size: 2.5rem; font-weight: 800; letter-spacing: 0.05em; position: sticky; top: 0; z-index: 1000; }
+
+/* Card Container */ .container { max-width: 960px; margin: 2rem auto; padding: 2rem; background: white; border-radius: 16px; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08); transition: box-shadow 0.3s ease; } .container:hover { box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1); }
+
+/* Base Name */ #base-name { font-size: 1.4rem; font-weight: bold; margin-bottom: 1rem; color: #1e293b; }
+
+/* Data Rows */ .data-point { margin: 0.5rem 0; font-size: 1rem; line-height: 1.5; transition: all 0.3s ease; }
+
+/* Forecast grid */ #forecast { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 1rem; margin-top: 1rem; }
+
+#forecast > div { background: #e0f2fe; border-radius: 8px; padding: 0.75rem; font-size: 0.95rem; color: #0f172a; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+
+/* Buttons */ button { background-color: #2563eb; color: white; border: none; border-radius: 6px; padding: 0.6rem 1.2rem; font-size: 1rem; font-weight: 600; cursor: pointer; transition: background-color 0.2s ease; }
+
+button:hover { background-color: #1e40af; }
+
+/* Countdown */ #countdown { margin-top: 1rem; font-style: italic; color: #475569; font-size: 0.9rem; }
+
+/* Animations */ @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+@keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.4); } 50% { box-shadow: 0 0 0 12px rgba(37, 99, 235, 0); } }
+
+.animate-pulse { animation: pulse 2s infinite; }
+
+                      

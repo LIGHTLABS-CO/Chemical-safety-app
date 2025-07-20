@@ -2,7 +2,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Chevron Base Environmental Monitor</title>
+  <title>Environmental Weather Monitor</title>
   <script defer>
     let refreshInterval;
     let countdownInterval;
@@ -12,10 +12,10 @@
   nextUpdateTime = 600;
 
   const coords = {
-    baseA: { lat: 5.517, lon: 5.750 },
-    baseB: { lat: 5.570, lon: 5.820 }
+    baseA: { lat: 5.517, lon: 5.750, name: 'Chevron Escravos Terminal, Warri South' },
+    baseB: { lat: 5.570, lon: 5.820, name: 'Chevron Tank Farm, Ekpan' }
   };
-  const { lat, lon } = coords[base];
+  const { lat, lon, name } = coords[base];
   const apiKey = '7ce545e8426a719062d9f8a7795d1e56';
   const weatherURL = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric`;
   const forecastURL = `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric`;
@@ -27,7 +27,7 @@
       const weatherData = await weatherRes.json();
       const forecastData = await forecastRes.json();
 
-      document.getElementById('base-name').textContent = base === 'baseA' ? 'Chevron Base A – Warri South' : 'Chevron Base B – Ekpan';
+      document.getElementById('base-name').textContent = `Weather Monitoring at ${name}`;
 
       animateValue('temp', weatherData.main.temp, '°C');
       animateValue('humidity', weatherData.main.humidity, '%');
@@ -90,11 +90,14 @@
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100 font-sans">
-  <div class="max-w-2xl mx-auto mt-10 p-6 bg-white shadow rounded animate-pulse">
-    <h1 class="text-2xl font-bold mb-4 animate-fade-in">Chevron Base Environmental Monitor</h1>
+  <div class="bg-gradient-to-r from-blue-700 to-cyan-500 py-6 text-center shadow-md">
+    <h1 class="text-4xl font-extrabold text-white tracking-wider animate-fade-in">LIGHTHOUSE LABS</h1>
+  </div>
+  <div class="max-w-2xl mx-auto mt-6 p-6 bg-white shadow rounded animate-pulse">
+    <h1 class="text-2xl font-bold mb-4 animate-fade-in">Chevron Weather Environmental Monitor</h1>
     <div class="flex space-x-4 mb-6">
-      <button onclick="fetchWeather('baseA')" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition">Monitor Base A – Warri South</button>
-      <button onclick="fetchWeather('baseB')" class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition">Monitor Base B – Ekpan</button>
+      <button onclick="fetchWeather('baseA')" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition">Monitor Escravos Terminal</button>
+      <button onclick="fetchWeather('baseB')" class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition">Monitor Ekpan Tank Farm</button>
     </div>
     <div class="bg-gray-50 p-4 rounded shadow animate-fade-in">
       <h2 id="base-name" class="text-xl font-semibold mb-2">No base selected</h2>
@@ -119,4 +122,4 @@
     }
   </style>
 </body>
-</html>
+    </html>

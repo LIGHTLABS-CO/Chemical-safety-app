@@ -1,28 +1,103 @@
-body { margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f4f8; color: #333; padding: 0; }
+<!DOCTYPE html><html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Weather Monitor</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div class="banner">LIGHTHOUSE LABS</div>
+  <div class="countdown-timer" id="countdown">Next update in 10:00</div>
+  <div class="container">
+    <div style="text-align: center;">
+      <button onclick="switchBase('Chevron Branch A, Warri')">Chevron Branch A</button>
+      <button onclick="switchBase('Chevron Branch B, Warri')">Chevron Branch B</button>
+      <button onclick="switchBase('Bon Hotel Hyatti, Warri')">Bon Hotel Hyatti</button>
+    </div>
+    <div id="base-name">Chevron Branch A, Warri</div>
+    <div id="weather"></div>
+    <canvas id="tempChart"></canvas>
+    <div id="forecast"></div>
+  </div>  <script>
+    let base = 'Chevron Branch A, Warri';
+    let countdown = 600;
+    let chart;
+    let temperatureData = [];
+    const ctx = document.getElementById('tempChart').getContext('2d');
 
-.banner { background: linear-gradient(to right, #222, #555); color: white; font-size: 2rem; padding: 1rem; text-align: center; font-weight: bold; letter-spacing: 2px; }
+    function switchBase(newBase) {
+      base = newBase;
+      document.getElementById('base-name').innerText = newBase;
+      fetchWeather();
+    }
 
-.countdown-timer { font-size: 1.5rem; font-weight: bold; color: #d32f2f; text-align: center; margin-top: 1rem; }
+    function updateCountdown() {
+      const minutes = String(Math.floor(countdown / 60)).padStart(2, '0');
+      const seconds = String(countdown % 60).padStart(2, '0');
+      document.getElementById('countdown').innerText = `Next update in ${minutes}:${seconds}`;
+      countdown--;
+      if (countdown < 0) {
+        countdown = 600;
+        fetchWeather();
+      }
+    }
 
-.container { max-width: 900px; margin: 2rem auto; padding: 1rem; background: white; border-radius: 12px; box-shadow: 0 0 15px rgba(0,0,0,0.1); }
+    async function fetchWeather() {
+      const url = `https://api.openweathermap.org/data/2.5/weather?q=Warri,NG&appid=7ce545e8426a719062d9f8a7795d1e56&units=imperial`;
+      const response = await fetch(url);
+      const data = await response.json();
 
-button { margin: 0.5rem; padding: 0.8rem 1.2rem; background-color: #007bff; color: white; border: none; border-radius: 8px; font-size: 1rem; cursor: pointer; transition: background 0.3s ease; }
+      const temp = data.main.temp;
+      const humidity = data.main.humidity;
+      const windSpeed = data.wind.speed;
+      const weather = data.weather[0].description;
 
-button:hover { background-color: #0056b3; }
+      const fluctuatedTemp = (temp + (Math.random() * 1.5 - 0.5)).toFixed(2);
+      temperatureData.push(fluctuatedTemp);
+      if (temperatureData.length > 20) temperatureData.shift();
 
-#base-name { text-align: center; font-size: 1.3rem; margin: 1.5rem 0; font-weight: bold; color: #222; }
+      document.getElementById('weather').innerHTML = `
+        <div class="data-point"><strong>Temperature:</strong> ${fluctuatedTemp} °F</div>
+        <div class="data-point"><strong>Humidity:</strong> ${humidity}%</div>
+        <div class="data-point"><strong>Wind Speed:</strong> ${windSpeed} mph</div>
+        <div class="data-point"><strong>Condition:</strong> ${weather}</div>
+      `;
 
-#weather, #forecast { margin-top: 1rem; text-align: center; line-height: 1.6; }
+      updateChart();
+    }
 
-.data-point { font-size: 1.1rem; margin: 0.5rem auto; }
+    function updateChart() {
+      if (chart) chart.destroy();
+      chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: Array.from({ length: temperatureData.length }, (_, i) => i + 1),
+          datasets: [{
+            label: 'Temperature Fluctuation',
+            data: temperatureData,
+            borderColor: 'rgba(255,0,255,1)',
+            backgroundColor: ctx.createLinearGradient(0, 0, 0, 400),
+            fill: true,
+            tension: 0.3,
+            pointRadius: 2,
+            borderWidth: 2
+          }]
+        },
+        options: {
+          scales: {
+            y: {
+              beginAtZero: false
+            }
+          }
+        }
+      });
+      chart.data.datasets[0].backgroundColor.addColorStop(0, 'red');
+      chart.data.datasets[0].backgroundColor.addColorStop(0.5, 'orange');
+      chart.data.datasets[0].backgroundColor.addColorStop(1, 'violet');
+    }
 
-canvas#tempChart { display: block; margin: 2rem auto; max-width: 100%; height: 300px; }
-
-@keyframes pulse { 0% { transform: scale(1); opacity: 0.7; } 50% { transform: scale(1.1); opacity: 1; } 100% { transform: scale(1); opacity: 0.7; } }
-
-#countdown { animation: pulse 2s infinite; }
-
-@media (max-width: 600px) { .container { padding: 0.5rem; }
-
-button { width: 100%; margin: 0.4rem 0; } }
-
+    fetchWeather();
+    setInterval(updateCountdown, 1000);
+  </script></body>
+</html>

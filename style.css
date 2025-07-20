@@ -1,29 +1,28 @@
-/* style.css - Professional and animated styling for Lighthouse Labs Weather Monitor */
+body { margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f4f8; color: #333; padding: 0; }
 
-body { background: #f4f6f8; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #222; margin: 0; padding: 0; animation: fadeIn 1.2s ease-in; }
+.banner { background: linear-gradient(to right, #222, #555); color: white; font-size: 2rem; padding: 1rem; text-align: center; font-weight: bold; letter-spacing: 2px; }
 
-/* Banner */ .banner { background: linear-gradient(to right, #0f172a, #2563eb); padding: 2rem 1rem; text-align: center; color: white; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); font-size: 2.5rem; font-weight: 800; letter-spacing: 0.05em; position: sticky; top: 0; z-index: 1000; }
+.countdown-timer { font-size: 1.5rem; font-weight: bold; color: #d32f2f; text-align: center; margin-top: 1rem; }
 
-/* Card Container */ .container { max-width: 960px; margin: 2rem auto; padding: 2rem; background: white; border-radius: 16px; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08); transition: box-shadow 0.3s ease; } .container:hover { box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1); }
+.container { max-width: 900px; margin: 2rem auto; padding: 1rem; background: white; border-radius: 12px; box-shadow: 0 0 15px rgba(0,0,0,0.1); }
 
-/* Base Name */ #base-name { font-size: 1.4rem; font-weight: bold; margin-bottom: 1rem; color: #1e293b; }
+button { margin: 0.5rem; padding: 0.8rem 1.2rem; background-color: #007bff; color: white; border: none; border-radius: 8px; font-size: 1rem; cursor: pointer; transition: background 0.3s ease; }
 
-/* Data Rows */ .data-point { margin: 0.5rem 0; font-size: 1rem; line-height: 1.5; transition: all 0.3s ease; }
+button:hover { background-color: #0056b3; }
 
-/* Forecast grid */ #forecast { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 1rem; margin-top: 1rem; }
+#base-name { text-align: center; font-size: 1.3rem; margin: 1.5rem 0; font-weight: bold; color: #222; }
 
-#forecast > div { background: #e0f2fe; border-radius: 8px; padding: 0.75rem; font-size: 0.95rem; color: #0f172a; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+#weather, #forecast { margin-top: 1rem; text-align: center; line-height: 1.6; }
 
-/* Buttons */ button { background-color: #2563eb; color: white; border: none; border-radius: 6px; padding: 0.6rem 1.2rem; font-size: 1rem; font-weight: 600; cursor: pointer; transition: background-color 0.2s ease; }
+.data-point { font-size: 1.1rem; margin: 0.5rem auto; }
 
-button:hover { background-color: #1e40af; }
+canvas#tempChart { display: block; margin: 2rem auto; max-width: 100%; height: 300px; }
 
-/* Countdown */ #countdown { margin-top: 1rem; font-style: italic; color: #475569; font-size: 0.9rem; }
+@keyframes pulse { 0% { transform: scale(1); opacity: 0.7; } 50% { transform: scale(1.1); opacity: 1; } 100% { transform: scale(1); opacity: 0.7; } }
 
-/* Animations */ @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+#countdown { animation: pulse 2s infinite; }
 
-@keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.4); } 50% { box-shadow: 0 0 0 12px rgba(37, 99, 235, 0); } }
+@media (max-width: 600px) { .container { padding: 0.5rem; }
 
-.animate-pulse { animation: pulse 2s infinite; }
+button { width: 100%; margin: 0.4rem 0; } }
 
-                      

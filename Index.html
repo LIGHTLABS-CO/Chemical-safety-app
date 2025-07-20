@@ -1,98 +1,28 @@
-<!DOCTYPE html><html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Lighthouse Labs Weather Monitor</title>
-  <link rel="stylesheet" href="style.css" />
-</head>
-<body>
-  <div class="banner">LIGHTHOUSE LABS</div>
-  <div class="container">
-    <div style="text-align:center; margin-bottom: 1rem;">
-      <button onclick="selectBase('escravos')">Weather Monitoring at Escravos Terminal, Chevron</button>
-      <button onclick="selectBase('ekpan')">Weather Monitoring at Tank Farm, Chevron</button>
-    </div>
-    <div id="base-name"></div>
-    <div id="weather"></div>
-    <div id="forecast"></div>
-    <div id="countdown"></div>
-  </div>
-  <script>
-    const apiKey = '7ce545e8426a719062d9f8a7795d1e56';
-    const bases = {
-      escravos: {
-        name: 'Weather Monitoring at Escravos Terminal, Chevron',
-        lat: 5.6167,
-        lon: 5.2167
-      },
-      ekpan: {
-        name: 'Weather Monitoring at Tank Farm, Chevron',
-        lat: 5.5333,
-        lon: 5.7667
-      }
-    };let currentInterval = null;
-let countdownInterval = null;
-let nextUpdateIn = 600; // seconds
+body { margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f4f8; color: #333; padding: 0; }
 
-function selectBase(baseKey) {
-  const base = bases[baseKey];
-  document.getElementById('base-name').innerText = base.name;
-  fetchWeather(base);
+.banner { background: linear-gradient(to right, #222, #555); color: white; font-size: 2rem; padding: 1rem; text-align: center; font-weight: bold; letter-spacing: 2px; }
 
-  if (currentInterval) clearInterval(currentInterval);
-  if (countdownInterval) clearInterval(countdownInterval);
+.countdown-timer { font-size: 1.5rem; font-weight: bold; color: #d32f2f; text-align: center; margin-top: 1rem; }
 
-  currentInterval = setInterval(() => fetchWeather(base), 600000); // 10 minutes
-  countdownInterval = setInterval(updateCountdown, 1000);
-  nextUpdateIn = 600;
-}
+.container { max-width: 900px; margin: 2rem auto; padding: 1rem; background: white; border-radius: 12px; box-shadow: 0 0 15px rgba(0,0,0,0.1); }
 
-function updateCountdown() {
-  const countdown = document.getElementById('countdown');
-  const mins = Math.floor(nextUpdateIn / 60);
-  const secs = nextUpdateIn % 60;
-  countdown.innerText = `Next update in: ${mins}m ${secs < 10 ? '0' : ''}${secs}s`;
-  if (nextUpdateIn > 0) nextUpdateIn--;
-}
+button { margin: 0.5rem; padding: 0.8rem 1.2rem; background-color: #007bff; color: white; border: none; border-radius: 8px; font-size: 1rem; cursor: pointer; transition: background 0.3s ease; }
 
-async function fetchWeather(base) {
-  const weatherDiv = document.getElementById('weather');
-  const forecastDiv = document.getElementById('forecast');
-  try {
-    const [weatherRes, forecastRes] = await Promise.all([
-      fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${base.lat}&lon=${base.lon}&appid=${apiKey}&units=metric`),
-      fetch(`https://api.openweathermap.org/data/2.5/forecast?lat=${base.lat}&lon=${base.lon}&appid=${apiKey}&units=metric`)
-    ]);
+button:hover { background-color: #0056b3; }
 
-    const weather = await weatherRes.json();
-    const forecast = await forecastRes.json();
+#base-name { text-align: center; font-size: 1.3rem; margin: 1.5rem 0; font-weight: bold; color: #222; }
 
-    weatherDiv.innerHTML = `
-      <div class="data-point"><strong>Temperature:</strong> ${weather.main.temp} °C</div>
-      <div class="data-point"><strong>Humidity:</strong> ${weather.main.humidity}%</div>
-      <div class="data-point"><strong>Wind Speed:</strong> ${weather.wind.speed} m/s</div>
-      <div class="data-point"><strong>Weather:</strong> ${weather.weather[0].description}</div>
-    `;
+#weather, #forecast { margin-top: 1rem; text-align: center; line-height: 1.6; }
 
-    forecastDiv.innerHTML = '';
-    for (let i = 0; i < 5; i++) {
-      const entry = forecast.list[i];
-      forecastDiv.innerHTML += `
-        <div>
-          <div><strong>${entry.dt_txt}</strong></div>
-          <div>🌡 ${entry.main.temp} °C</div>
-          <div>💧 ${entry.main.humidity}%</div>
-          <div>🌬 ${entry.wind.speed} m/s</div>
-        </div>
-      `;
-    }
-    nextUpdateIn = 600;
-  } catch (err) {
-    weatherDiv.innerText = 'Error fetching weather data.';
-    forecastDiv.innerHTML = '';
-  }
-}
+.data-point { font-size: 1.1rem; margin: 0.5rem auto; }
 
-  </script>
-</body>
-</html>
+canvas#tempChart { display: block; margin: 2rem auto; max-width: 100%; height: 300px; }
+
+@keyframes pulse { 0% { transform: scale(1); opacity: 0.7; } 50% { transform: scale(1.1); opacity: 1; } 100% { transform: scale(1); opacity: 0.7; } }
+
+#countdown { animation: pulse 2s infinite; }
+
+@media (max-width: 600px) { .container { padding: 0.5rem; }
+
+button { width: 100%; margin: 0.4rem 0; } }
+

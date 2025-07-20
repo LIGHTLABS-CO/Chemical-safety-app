@@ -2,124 +2,97 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Environmental Weather Monitor</title>
-  <script defer>
-    let refreshInterval;
-    let countdownInterval;
-    let nextUpdateTime = 600;function fetchWeather(base) {
-  clearInterval(refreshInterval);
-  clearInterval(countdownInterval);
-  nextUpdateTime = 600;
-
-  const coords = {
-    baseA: { lat: 5.517, lon: 5.750, name: 'Chevron Escravos Terminal, Warri South' },
-    baseB: { lat: 5.570, lon: 5.820, name: 'Chevron Tank Farm, Ekpan' }
-  };
-  const { lat, lon, name } = coords[base];
-  const apiKey = '7ce545e8426a719062d9f8a7795d1e56';
-  const weatherURL = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric`;
-  const forecastURL = `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric`;
-
-  async function update() {
-    try {
-      const weatherRes = await fetch(weatherURL);
-      const forecastRes = await fetch(forecastURL);
-      const weatherData = await weatherRes.json();
-      const forecastData = await forecastRes.json();
-
-      document.getElementById('base-name').textContent = `Weather Monitoring at ${name}`;
-
-      animateValue('temp', weatherData.main.temp, '°C');
-      animateValue('humidity', weatherData.main.humidity, '%');
-      animateValue('wind', weatherData.wind.speed, 'km/h');
-      document.getElementById('condition').textContent = weatherData.weather[0].description;
-
-      const forecastContainer = document.getElementById('forecast');
-      forecastContainer.innerHTML = '';
-      forecastData.list.slice(0, 6).forEach(item => {
-        const el = document.createElement('div');
-        el.className = 'bg-blue-100 rounded p-2 text-sm';
-        el.innerHTML = `<strong>${item.dt_txt.slice(11, 16)}</strong>: ${item.weather[0].description}, ${item.main.temp}°C`;
-        forecastContainer.appendChild(el);
-      });
-    } catch (error) {
-      console.error('Error fetching data:', error);
-    }
-  }
-
-  function animateValue(id, end, unit = '') {
-    const el = document.getElementById(id);
-    let start = parseFloat(el.textContent) || 0;
-    const duration = 800;
-    const stepTime = 20;
-    const steps = duration / stepTime;
-    const increment = (end - start) / steps;
-    let step = 0;
-
-    const timer = setInterval(() => {
-      step++;
-      const val = start + increment * step;
-      el.textContent = val.toFixed(1) + ' ' + unit;
-      if (step >= steps) clearInterval(timer);
-    }, stepTime);
-  }
-
-  function updateCountdown() {
-    const el = document.getElementById('countdown');
-    countdownInterval = setInterval(() => {
-      if (nextUpdateTime <= 0) {
-        clearInterval(countdownInterval);
-        nextUpdateTime = 600;
+  <title>Lighthouse Labs Weather Monitor</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="banner">LIGHTHOUSE LABS</div>
+  <div class="container">
+    <div style="text-align:center; margin-bottom: 1rem;">
+      <button onclick="selectBase('escravos')">Weather Monitoring at Escravos Terminal, Chevron</button>
+      <button onclick="selectBase('ekpan')">Weather Monitoring at Tank Farm, Chevron</button>
+    </div>
+    <div id="base-name"></div>
+    <div id="weather"></div>
+    <div id="forecast"></div>
+    <div id="countdown"></div>
+  </div>
+  <script>
+    const apiKey = '7ce545e8426a719062d9f8a7795d1e56';
+    const bases = {
+      escravos: {
+        name: 'Weather Monitoring at Escravos Terminal, Chevron',
+        lat: 5.6167,
+        lon: 5.2167
+      },
+      ekpan: {
+        name: 'Weather Monitoring at Tank Farm, Chevron',
+        lat: 5.5333,
+        lon: 5.7667
       }
-      const mins = Math.floor(nextUpdateTime / 60);
-      const secs = nextUpdateTime % 60;
-      el.textContent = `Next update in: ${mins}m ${secs}s`;
-      nextUpdateTime--;
-    }, 1000);
-  }
+    };let currentInterval = null;
+let countdownInterval = null;
+let nextUpdateIn = 600; // seconds
 
-  update();
-  updateCountdown();
-  refreshInterval = setInterval(() => {
-    update();
-    nextUpdateTime = 600;
-  }, 600000); // every 10 minutes
+function selectBase(baseKey) {
+  const base = bases[baseKey];
+  document.getElementById('base-name').innerText = base.name;
+  fetchWeather(base);
+
+  if (currentInterval) clearInterval(currentInterval);
+  if (countdownInterval) clearInterval(countdownInterval);
+
+  currentInterval = setInterval(() => fetchWeather(base), 600000); // 10 minutes
+  countdownInterval = setInterval(updateCountdown, 1000);
+  nextUpdateIn = 600;
+}
+
+function updateCountdown() {
+  const countdown = document.getElementById('countdown');
+  const mins = Math.floor(nextUpdateIn / 60);
+  const secs = nextUpdateIn % 60;
+  countdown.innerText = `Next update in: ${mins}m ${secs < 10 ? '0' : ''}${secs}s`;
+  if (nextUpdateIn > 0) nextUpdateIn--;
+}
+
+async function fetchWeather(base) {
+  const weatherDiv = document.getElementById('weather');
+  const forecastDiv = document.getElementById('forecast');
+  try {
+    const [weatherRes, forecastRes] = await Promise.all([
+      fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${base.lat}&lon=${base.lon}&appid=${apiKey}&units=metric`),
+      fetch(`https://api.openweathermap.org/data/2.5/forecast?lat=${base.lat}&lon=${base.lon}&appid=${apiKey}&units=metric`)
+    ]);
+
+    const weather = await weatherRes.json();
+    const forecast = await forecastRes.json();
+
+    weatherDiv.innerHTML = `
+      <div class="data-point"><strong>Temperature:</strong> ${weather.main.temp} °C</div>
+      <div class="data-point"><strong>Humidity:</strong> ${weather.main.humidity}%</div>
+      <div class="data-point"><strong>Wind Speed:</strong> ${weather.wind.speed} m/s</div>
+      <div class="data-point"><strong>Weather:</strong> ${weather.weather[0].description}</div>
+    `;
+
+    forecastDiv.innerHTML = '';
+    for (let i = 0; i < 5; i++) {
+      const entry = forecast.list[i];
+      forecastDiv.innerHTML += `
+        <div>
+          <div><strong>${entry.dt_txt}</strong></div>
+          <div>🌡 ${entry.main.temp} °C</div>
+          <div>💧 ${entry.main.humidity}%</div>
+          <div>🌬 ${entry.wind.speed} m/s</div>
+        </div>
+      `;
+    }
+    nextUpdateIn = 600;
+  } catch (err) {
+    weatherDiv.innerText = 'Error fetching weather data.';
+    forecastDiv.innerHTML = '';
+  }
 }
 
   </script>
-  <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-gray-100 font-sans">
-  <div class="bg-gradient-to-r from-blue-700 to-cyan-500 py-6 text-center shadow-md">
-    <h1 class="text-4xl font-extrabold text-white tracking-wider animate-fade-in">LIGHTHOUSE LABS</h1>
-  </div>
-  <div class="max-w-2xl mx-auto mt-6 p-6 bg-white shadow rounded animate-pulse">
-    <h1 class="text-2xl font-bold mb-4 animate-fade-in">Chevron Weather Environmental Monitor</h1>
-    <div class="flex space-x-4 mb-6">
-      <button onclick="fetchWeather('baseA')" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition">Monitor Escravos Terminal</button>
-      <button onclick="fetchWeather('baseB')" class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition">Monitor Ekpan Tank Farm</button>
-    </div>
-    <div class="bg-gray-50 p-4 rounded shadow animate-fade-in">
-      <h2 id="base-name" class="text-xl font-semibold mb-2">No base selected</h2>
-      <p><strong>Temperature:</strong> <span id="temp">--</span></p>
-      <p><strong>Humidity:</strong> <span id="humidity">--</span></p>
-      <p><strong>Wind Speed:</strong> <span id="wind">--</span></p>
-      <p><strong>Condition:</strong> <span id="condition">--</span></p>
-      <p id="countdown" class="mt-2 text-sm text-gray-600 italic">Next update in: --</p>
-    </div>
-    <div class="mt-6">
-      <h3 class="text-lg font-bold mb-2">Forecast</h3>
-      <div id="forecast" class="grid grid-cols-2 gap-2"></div>
-    </div>
-  </div>
-  <style>
-    .animate-fade-in {
-      animation: fadeIn 0.8s ease-in forwards;
-    }
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-  </style>
 </body>
-    </html>
+</html>

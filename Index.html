@@ -1,226 +1,127 @@
-<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html><html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Live Atmospheric Monitor</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Live Environmental Monitor</title>
   <style>
     body {
       margin: 0;
-      font-family: 'Orbitron', sans-serif;
-      background: radial-gradient(ellipse at center, #0a0a0a 0%, #000 100%);
-      color: #0ff;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #0d0d0d;
+      color: #eee;
+      padding: 0;
       overflow-x: hidden;
     }
     .banner {
-      background: #0ff;
-      color: black;
+      background: linear-gradient(to right, #222, #0ff, #222);
+      color: white;
+      font-size: 2.2rem;
+      padding: 1rem;
       text-align: center;
-      font-size: 2rem;
-      padding: 10px;
       font-weight: bold;
       letter-spacing: 2px;
+      animation: pulseGlow 5s infinite alternate;
+    }
+    @keyframes pulseGlow {
+      from { text-shadow: 0 0 10px #0ff; }
+      to { text-shadow: 0 0 30px #0ff, 0 0 20px #0ff; }
+    }
+    .countdown-timer {
+      font-size: 1.7rem;
+      font-weight: bold;
+      color: #ff4081;
+      text-align: center;
+      margin-top: 1rem;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0% { transform: scale(1); opacity: 0.7; }
+      50% { transform: scale(1.1); opacity: 1; }
+      100% { transform: scale(1); opacity: 0.7; }
     }
     .container {
-      padding: 20px;
+      max-width: 960px;
+      margin: 2rem auto;
+      padding: 1rem;
+      background: #1c1c1c;
+      border-radius: 12px;
+      box-shadow: 0 0 20px rgba(0,255,255,0.3);
+      transition: all 0.8s ease-in-out;
     }
     button {
-      margin: 5px;
-      padding: 10px 20px;
-      background: #222;
-      color: #0ff;
-      border: 1px solid #0ff;
+      margin: 0.5rem;
+      padding: 0.8rem 1.2rem;
+      background-color: #00bcd4;
+      color: white;
+      border: none;
       border-radius: 8px;
-      font-weight: bold;
+      font-size: 1rem;
       cursor: pointer;
-      transition: all 0.4s ease;
+      transition: background 0.3s ease, transform 0.4s ease;
     }
     button:hover {
-      background: #0ff;
-      color: #000;
-    }
-    .data-point {
-      margin: 8px 0;
+      background-color: #008ba3;
+      transform: scale(1.1);
     }
     #base-name {
+      text-align: center;
       font-size: 1.5rem;
-      margin: 20px 0;
-      text-align: center;
-      transition: opacity 0.6s ease-in-out;
+      margin: 1.5rem 0;
+      font-weight: bold;
+      color: #0ff;
+      transition: all 0.6s ease-in-out;
     }
-    canvas {
-      max-width: 100%;
-      margin: 20px 0;
-    }
-    #countdown {
+    #weather, #forecast, #history {
+      margin-top: 1rem;
       text-align: center;
-      margin-top: 10px;
+      line-height: 1.6;
+    }
+    .data-point {
       font-size: 1.2rem;
-      color: #fff;
+      margin: 0.5rem auto;
+      color: #ccc;
+    }
+    canvas#tempChart {
+      display: block;
+      margin: 2rem auto;
+      max-width: 100%;
+      height: 300px;
     }
     #history {
-      background: #111;
-      padding: 15px;
-      margin-top: 20px;
-      border-radius: 10px;
-      border: 1px solid #0ff;
-      max-height: 200px;
-      overflow-y: auto;
+      border-top: 1px solid #444;
+      margin-top: 2rem;
+      padding-top: 1rem;
+      font-size: 1rem;
+      color: #aaa;
     }
-    #history h3 {
-      margin-top: 0;
-      text-align: center;
-      color: #0ff;
-    }
-    audio {
-      display: none;
+    @media (max-width: 600px) {
+      .container {
+        padding: 0.5rem;
+      }
+      button {
+        width: 100%;
+        margin: 0.4rem 0;
+      }
     }
   </style>
 </head>
-<body onclick="startSound()">
+<body>
   <div class="banner">LIGHTHOUSE LABS</div>
   <div class="countdown-timer" id="countdown">Next update in 10:00</div>
   <div class="container">
-    <div style="text-align:center;">
-      <button onclick="switchBase('Live Monitor at Escravos Terminal, Chevron')">Escravos Terminal</button>
-      <button onclick="switchBase('Live Monitor at Meren Platform, Chevron')">Meren Platform</button>
-      <button onclick="switchBase('Live Monitor at Bon Hotel Hyatti')">Bon Hotel Hyatti</button>
+    <div style="text-align: center;">
+      <button onclick="switchBase('Escravos Terminal, Chevron')">Escravos Chevron</button>
+      <button onclick="switchBase('Meren Platform, Chevron')">Meren Chevron</button>
+      <button onclick="switchBase('Bon Hotel Hyatti, Warri')">Bon Hotel Hyatti</button>
     </div>
-    <div id="base-name">Live Monitor at Escravos Terminal, Chevron</div>
+    <div id="base-name">Escravos Terminal, Chevron</div>
     <div id="weather"></div>
     <canvas id="tempChart"></canvas>
-    <div id="history">
-      <h3>Data History</h3>
-      <ul id="historyList" style="list-style:none; padding-left:0;"></ul>
-    </div>
+    <div id="forecast"></div>
+    <div id="history"></div>
   </div>
-
-  <!-- Ambient Sci-Fi Sound -->
-  <audio id="ambient" loop>
-    <source src="https://cdn.pixabay.com/download/audio/2023/04/11/audio_1c012a226b.mp3?filename=cosmic-flow-144113.mp3" type="audio/mpeg" />
+  <audio autoplay loop>
+    <source src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" type="audio/mpeg">
   </audio>
-
-  <script>
-    let base = 'Live Monitor at Escravos Terminal, Chevron';
-    let countdown = 600;
-    let chart;
-    let temperatureData = [];
-    let currentTemp = 68;
-    let humidity = 30;
-    let windSpeed = 4;
-    let weather = 'clear sky';
-    const ctx = document.getElementById('tempChart').getContext('2d');
-    const historyList = document.getElementById('historyList');
-
-    function startSound() {
-      const ambient = document.getElementById('ambient');
-      ambient.play().catch(() => {});
-    }
-
-    function switchBase(newBase) {
-      document.getElementById('base-name').style.opacity = 0;
-      setTimeout(() => {
-        base = newBase;
-        document.getElementById('base-name').innerText = newBase;
-        document.getElementById('base-name').style.opacity = 1;
-        fetchWeather();
-      }, 500);
-    }
-
-    function updateCountdown() {
-      const minutes = String(Math.floor(countdown / 60)).padStart(2, '0');
-      const seconds = String(countdown % 60).padStart(2, '0');
-      document.getElementById('countdown').innerText = `Next update in ${minutes}:${seconds}`;
-      countdown--;
-      if (countdown < 0) {
-        countdown = 600;
-        fetchWeather();
-      }
-    }
-
-    async function fetchWeather() {
-      const url = `https://api.openweathermap.org/data/2.5/weather?q=Warri,NG&appid=7ce545e8426a719062d9f8a7795d1e56&units=imperial`;
-      const response = await fetch(url);
-      const data = await response.json();
-
-      currentTemp = data.main.temp;
-      humidity = data.main.humidity;
-      windSpeed = data.wind.speed;
-      weather = data.weather[0].description;
-
-      const log = document.createElement('li');
-      log.innerHTML = `<strong>${new Date().toLocaleTimeString()}</strong>: ${currentTemp.toFixed(1)}°F, ${humidity}% Humidity, ${windSpeed}mph, ${weather}`;
-      historyList.prepend(log);
-
-      if (historyList.children.length > 30) {
-        historyList.removeChild(historyList.lastChild);
-      }
-    }
-
-    function updateDisplay() {
-      // Minor random fluctuation
-      let fluctuatedTemp = (currentTemp + (Math.random() * 1.4 - 0.7)).toFixed(2);
-      let fluctuatedHumidity = (humidity + (Math.random() * 2 - 1)).toFixed(1);
-      let fluctuatedWind = (windSpeed + (Math.random() * 1.2 - 0.6)).toFixed(1);
-
-      document.getElementById('weather').innerHTML = `
-        <div class="data-point"><strong>Temperature:</strong> ${fluctuatedTemp} °F</div>
-        <div class="data-point"><strong>Humidity:</strong> ${fluctuatedHumidity}%</div>
-        <div class="data-point"><strong>Wind Speed:</strong> ${fluctuatedWind} mph</div>
-        <div class="data-point"><strong>Condition:</strong> ${weather}</div>
-      `;
-
-      temperatureData.push(fluctuatedTemp);
-      if (temperatureData.length > 30) temperatureData.shift();
-      updateChart();
-    }
-
-    function updateChart() {
-      if (chart) chart.destroy();
-      const gradient = ctx.createLinearGradient(0, 0, 0, 400);
-      gradient.addColorStop(0, 'magenta');
-      gradient.addColorStop(0.5, 'cyan');
-      gradient.addColorStop(1, 'blue');
-
-      chart = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: Array.from({ length: temperatureData.length }, (_, i) => i + 1),
-          datasets: [{
-            label: 'Temperature Fluctuation',
-            data: temperatureData,
-            borderColor: '#0ff',
-            backgroundColor: gradient,
-            fill: true,
-            tension: 0.4,
-            pointRadius: 0,
-            borderWidth: 2
-          }]
-        },
-        options: {
-          animation: {
-            duration: 500
-          },
-          scales: {
-            y: {
-              beginAtZero: false
-            }
-          },
-          plugins: {
-            legend: {
-              labels: {
-                color: '#0ff'
-              }
-            }
-          }
-        }
-      });
-    }
-
-    fetchWeather();
-    setInterval(updateCountdown, 1000);
-    setInterval(updateDisplay, 1000);
-  </script>
 </body>
 </html>

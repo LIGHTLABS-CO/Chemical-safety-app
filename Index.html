@@ -1,187 +1,222 @@
-<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html><html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Live Atmospheric Monitor</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Live Monitor | Lighthouse Labs</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Segoe+UI&display=swap">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body {
       margin: 0;
-      font-family: 'Orbitron', sans-serif;
-      background: radial-gradient(ellipse at center, #0a0a0a 0%, #000 100%);
-      color: #0ff;
-      overflow-x: hidden;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f0f4f8;
+      color: #333;
+      padding: 0;
     }
     .banner {
-      background: #0ff;
-      color: black;
-      text-align: center;
+      background: linear-gradient(to right, #222, #555);
+      color: white;
       font-size: 2rem;
-      padding: 10px;
+      padding: 1rem;
+      text-align: center;
       font-weight: bold;
       letter-spacing: 2px;
     }
+    .countdown-timer {
+      font-size: 2rem;
+      font-weight: bold;
+      color: #d32f2f;
+      text-align: center;
+      margin: 1rem 0;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0% { transform: scale(1); opacity: 0.7; }
+      50% { transform: scale(1.1); opacity: 1; }
+      100% { transform: scale(1); opacity: 0.7; }
+    }
     .container {
-      padding: 20px;
+      max-width: 900px;
+      margin: auto;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.1);
+      padding: 1rem;
     }
     button {
-      margin: 5px;
-      padding: 10px 20px;
-      background: #222;
-      color: #0ff;
-      border: 1px solid #0ff;
+      margin: 0.5rem;
+      padding: 0.8rem 1.2rem;
+      background-color: #007bff;
+      color: white;
+      border: none;
       border-radius: 8px;
-      font-weight: bold;
+      font-size: 1rem;
       cursor: pointer;
-      transition: all 0.4s ease;
-    }
-    .base-btn.active {
-      background: #0ff;
-      color: #000;
     }
     button:hover {
-      background: #0ff;
-      color: #000;
-    }
-    .data-point {
-      margin: 8px 0;
+      background-color: #0056b3;
     }
     #base-name {
-      font-size: 1.5rem;
-      margin: 20px 0;
       text-align: center;
-      transition: opacity 0.6s ease-in-out;
+      font-size: 1.3rem;
+      margin: 1rem 0;
+      font-weight: bold;
+      color: #222;
     }
-    canvas {
+    #weather, #forecast {
+      margin-top: 1rem;
+      text-align: center;
+      line-height: 1.6;
+    }
+    .data-point {
+      font-size: 1.1rem;
+      margin: 0.4rem auto;
+    }
+    canvas#tempChart {
+      display: block;
+      margin: 2rem auto;
       max-width: 100%;
-      margin: 20px 0;
+      height: 300px;
     }
-    #countdown {
-      text-align: center;
-      margin-top: 10px;
-      font-size: 1.2rem;
-      color: #fff;
-    }
-    #history {
-      background: #111;
-      padding: 15px;
-      margin-top: 20px;
-      border-radius: 10px;
-      border: 1px solid #0ff;
+    .log-panel {
       max-height: 200px;
       overflow-y: auto;
+      background: #f9f9f9;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      padding: 0.5rem 1rem;
+      margin: 2rem 1rem;
+      font-size: 0.9rem;
     }
-    #history h3 {
-      margin-top: 0;
-      text-align: center;
-      color: #0ff;
-    }
-    #history li {
-      padding: 5px 0;
-      border-bottom: 1px dashed #0ff;
-      color: #ccc;
-    }
-    audio {
-      display: none;
+    .log-entry {
+      margin-bottom: 0.5rem;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 0.3rem;
     }
   </style>
 </head>
-<body onclick="startSound()">
+<body>
   <div class="banner">LIGHTHOUSE LABS</div>
   <div class="countdown-timer" id="countdown">Next update in 10:00</div>
   <div class="container">
-    <div style="text-align:center;">
-      <button class="base-btn active" onclick="switchBase(this, 'Live Monitor at Escravos Terminal, Chevron')">Escravos Terminal</button>
-      <button class="base-btn" onclick="switchBase(this, 'Live Monitor at Meren Platform, Chevron')">Meren Platform</button>
-      <button class="base-btn" onclick="switchBase(this, 'Live Monitor at Bon Hotel Hyatti')">Bon Hotel Hyatti</button>
+    <div style="text-align: center;">
+      <button onclick="switchBase('Escravos Terminal, Chevron')">Live Monitor at Escravos Terminal, Chevron</button>
+      <button onclick="switchBase('Tank Farm Road, Chevron')">Live Monitor at Tank Farm Road, Chevron</button>
+      <button onclick="switchBase('Bon Hotel Hyatti, Warri')">Live Monitor at Bon Hotel Hyatti, Chevron</button>
     </div>
     <div id="base-name">Live Monitor at Escravos Terminal, Chevron</div>
     <div id="weather"></div>
     <canvas id="tempChart"></canvas>
-    <div id="history">
-      <h3>Data History</h3>
-      <ul id="historyList" style="list-style:none; padding-left:0;"></ul>
-    </div>
+    <div class="log-panel" id="log"></div>
   </div>
-
-  <!-- Ambient Sci-Fi Sound -->
-  <audio id="ambient" loop>
-    <source src="https://cdn.pixabay.com/download/audio/2023/04/11/audio_1c012a226b.mp3?filename=cosmic-flow-144113.mp3" type="audio/mpeg" />
-  </audio>
-
+  <audio id="ambient" src="https://actions.google.com/sounds/v1/ambiences/countryside_day.ogg" loop></audio>
   <script>
-    let base = 'Live Monitor at Escravos Terminal, Chevron';
+    let base = 'Escravos Terminal, Chevron';
     let countdown = 600;
     let chart;
     let temperatureData = [];
-    let currentTemp = 68;
-    let humidity = 30;
-    let windSpeed = 4;
-    let weather = 'clear sky';
+    let fluctuatedTemp = 70, fluctuatedHumidity = 50, fluctuatedWind = 5;
+    let realTemp = 70, realHumidity = 50, realWind = 5;
     const ctx = document.getElementById('tempChart').getContext('2d');
-    const historyList = document.getElementById('historyList');
+    const ambientSound = document.getElementById('ambient');
+    ambientSound.volume = 0.2;
+    ambientSound.play();function switchBase(newBase) {
+  base = newBase;
+  document.getElementById('base-name').innerText = 'Live Monitor at ' + newBase;
+  fetchWeather();
+}
 
-    function startSound() {
-      const ambient = document.getElementById('ambient');
-      ambient.play().catch(() => {});
-    }
+function updateCountdown() {
+  const minutes = String(Math.floor(countdown / 60)).padStart(2, '0');
+  const seconds = String(countdown % 60).padStart(2, '0');
+  document.getElementById('countdown').innerText = `Next update in ${minutes}:${seconds}`;
+  countdown--;
+  if (countdown < 0) {
+    countdown = 600;
+    fetchWeather();
+  }
+}
 
-    function switchBase(btn, newBase) {
-      document.querySelectorAll('.base-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
+async function fetchWeather() {
+  const url = `https://api.openweathermap.org/data/2.5/weather?q=Warri,NG&appid=7ce545e8426a719062d9f8a7795d1e56&units=imperial`;
+  const response = await fetch(url);
+  const data = await response.json();
 
-      document.getElementById('base-name').style.opacity = 0;
-      setTimeout(() => {
-        base = newBase;
-        document.getElementById('base-name').innerText = newBase;
-        document.getElementById('base-name').style.opacity = 1;
-        fetchWeather();
-      }, 500);
-    }
+  realTemp = data.main.temp;
+  realHumidity = data.main.humidity;
+  realWind = data.wind.speed;
+  const weather = data.weather[0].description;
 
-    function updateCountdown() {
-      const minutes = String(Math.floor(countdown / 60)).padStart(2, '0');
-      const seconds = String(countdown % 60).padStart(2, '0');
-      document.getElementById('countdown').innerText = `Next update in ${minutes}:${seconds}`;
-      countdown--;
-      if (countdown < 0) {
-        countdown = 600;
-        fetchWeather();
-      }
-    }
+  logData(realTemp, realHumidity, realWind, weather);
+}
 
-    async function fetchWeather() {
-      try {
-        const url = `https://api.openweathermap.org/data/2.5/weather?q=Warri,NG&appid=7ce545e8426a719062d9f8a7795d1e56&units=imperial`;
-        const response = await fetch(url);
-        const data = await response.json();
+function fluctuateValues() {
+  fluctuatedTemp = (realTemp + (Math.random() * 1.5 - 0.7)).toFixed(2);
+  fluctuatedHumidity = (realHumidity + (Math.random() * 2 - 1)).toFixed(1);
+  fluctuatedWind = (realWind + (Math.random() * 1.5 - 0.5)).toFixed(2);
 
-        if (!data || !data.main) throw new Error("Invalid data");
+  document.getElementById('weather').innerHTML = `
+    <div class="data-point"><strong>Temperature:</strong> ${fluctuatedTemp} °F</div>
+    <div class="data-point"><strong>Humidity:</strong> ${fluctuatedHumidity}%</div>
+    <div class="data-point"><strong>Wind Speed:</strong> ${fluctuatedWind} mph</div>
+  `;
 
-        currentTemp = data.main.temp;
-        humidity = data.main.humidity;
-        windSpeed = data.wind.speed;
-        weather = data.weather[0].description;
+  temperatureData.push(fluctuatedTemp);
+  if (temperatureData.length > 20) temperatureData.shift();
+  updateChart();
+}
 
-        const log = document.createElement('li');
-        log.innerHTML = `<strong>${new Date().toLocaleTimeString()}</strong>: ${currentTemp.toFixed(1)}°F, ${humidity}% Humidity, ${windSpeed}mph, ${weather}`;
-        historyList.prepend(log);
-
-        if (historyList.children.length > 30) {
-          historyList.removeChild(historyList.lastChild);
+function updateChart() {
+  if (!chart) {
+    chart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: Array.from({ length: temperatureData.length }, (_, i) => i + 1),
+        datasets: [{
+          label: 'Temperature Fluctuation',
+          data: temperatureData,
+          borderColor: 'rgba(255,0,255,1)',
+          backgroundColor: getGradient(),
+          fill: true,
+          tension: 0.3,
+          pointRadius: 2,
+          borderWidth: 2
+        }]
+      },
+      options: {
+        animation: false,
+        responsive: true,
+        scales: {
+          y: { beginAtZero: false }
         }
-      } catch (e) {
-        const errorLog = document.createElement('li');
-        errorLog.style.color = 'red';
-        errorLog.innerText = `⚠️ Failed to fetch data: ${e.message}`;
-        historyList.prepend(errorLog);
       }
-    }
+    });
+  } else {
+    chart.data.labels = Array.from({ length: temperatureData.length }, (_, i) => i + 1);
+    chart.data.datasets[0].data = temperatureData;
+    chart.update();
+  }
+}
 
-    function updateDisplay() {
-      let fluctuatedTemp = +(currentTemp + (Math.random() * 1.4 - 0.7)).toFixed(2);
-      let fluctuatedHumidity = +(humidity + (Math.random() * 2 - 1)).toFixed(1);
-      let fluctuatedWind = +(windSpeed + (Math.random() * 1.2 - 0.6)).toFixed(1);
+function getGradient() {
+  const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+  gradient.addColorStop(0, 'red');
+  gradient.addColorStop(0.5, 'orange');
+  gradient.addColorStop(1, 'violet');
+  return gradient;
+}
 
-      document.getElementById('weather').
+function logData(temp, hum, wind, condition) {
+  const log = document.getElementById('log');
+  const time = new Date().toLocaleTimeString();
+  const entry = `<div class="log-entry">[${time}] Temp: ${temp} °F | Hum: ${hum}% | Wind: ${wind} mph | Cond: ${condition}</div>`;
+  log.innerHTML = entry + log.innerHTML;
+}
+
+fetchWeather();
+setInterval(updateCountdown, 1000);
+setInterval(fluctuateValues, 1000);
+
+  </script>
+</body>
+</html>

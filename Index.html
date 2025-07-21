@@ -2,128 +2,110 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Live Monitor | Lighthouse Labs</title>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Segoe+UI&display=swap">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <title>Lighthouse Live Monitor</title>
   <style>
     body {
+      background: #000;
+      color: #0ff;
+      font-family: 'Orbitron', sans-serif;
       margin: 0;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background-color: #f0f4f8;
-      color: #333;
-      padding: 0;
+      overflow-x: hidden;
     }
     .banner {
-      background: linear-gradient(to right, #222, #555);
-      color: white;
-      font-size: 2rem;
-      padding: 1rem;
       text-align: center;
-      font-weight: bold;
-      letter-spacing: 2px;
-    }
-    .countdown-timer {
       font-size: 2rem;
-      font-weight: bold;
-      color: #d32f2f;
-      text-align: center;
-      margin: 1rem 0;
-      animation: pulse 2s infinite;
-    }
-    @keyframes pulse {
-      0% { transform: scale(1); opacity: 0.7; }
-      50% { transform: scale(1.1); opacity: 1; }
-      100% { transform: scale(1); opacity: 0.7; }
+      padding: 10px;
+      background: linear-gradient(to right, #0ff, #00f, #f0f);
+      -webkit-background-clip: text;
+      color: transparent;
     }
     .container {
-      max-width: 900px;
-      margin: auto;
-      background: white;
-      border-radius: 12px;
-      box-shadow: 0 0 15px rgba(0,0,0,0.1);
-      padding: 1rem;
+      padding: 20px;
+      text-align: center;
     }
     button {
-      margin: 0.5rem;
-      padding: 0.8rem 1.2rem;
-      background-color: #007bff;
-      color: white;
+      margin: 5px;
+      padding: 10px 15px;
       border: none;
-      border-radius: 8px;
-      font-size: 1rem;
+      background: #111;
+      color: #0ff;
+      border: 1px solid #0ff;
+      transition: all 0.3s ease;
       cursor: pointer;
     }
     button:hover {
-      background-color: #0056b3;
+      background: #0ff;
+      color: #000;
     }
     #base-name {
-      text-align: center;
+      margin-top: 20px;
       font-size: 1.3rem;
-      margin: 1rem 0;
-      font-weight: bold;
-      color: #222;
-    }
-    #weather, #forecast {
-      margin-top: 1rem;
-      text-align: center;
-      line-height: 1.6;
+      animation: fadeIn 1s;
     }
     .data-point {
-      font-size: 1.1rem;
-      margin: 0.4rem auto;
+      margin: 5px 0;
     }
-    canvas#tempChart {
-      display: block;
-      margin: 2rem auto;
+    #countdown {
+      text-align: center;
+      margin-top: 10px;
+    }
+    canvas {
       max-width: 100%;
       height: 300px;
+      margin-top: 20px;
     }
-    .log-panel {
+    #history {
+      text-align: left;
+      margin-top: 30px;
       max-height: 200px;
       overflow-y: auto;
-      background: #f9f9f9;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      padding: 0.5rem 1rem;
-      margin: 2rem 1rem;
-      font-size: 0.9rem;
+      border-top: 1px solid #0ff;
+      padding-top: 10px;
     }
-    .log-entry {
-      margin-bottom: 0.5rem;
-      border-bottom: 1px solid #eee;
-      padding-bottom: 0.3rem;
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
     }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron&display=swap" rel="stylesheet">
 </head>
 <body>
   <div class="banner">LIGHTHOUSE LABS</div>
   <div class="countdown-timer" id="countdown">Next update in 10:00</div>
   <div class="container">
-    <div style="text-align: center;">
-      <button onclick="switchBase('Escravos Terminal, Chevron')">Live Monitor at Escravos Terminal, Chevron</button>
-      <button onclick="switchBase('Tank Farm Road, Chevron')">Live Monitor at Tank Farm Road, Chevron</button>
-      <button onclick="switchBase('Bon Hotel Hyatti, Warri')">Live Monitor at Bon Hotel Hyatti, Chevron</button>
+    <div>
+      <button onclick="switchBase('Live Monitor at Escravos Terminal, Chevron')">Escravos Terminal</button>
+      <button onclick="switchBase('Live Monitor at Meren Platform, Chevron')">Meren Platform</button>
+      <button onclick="switchBase('Live Monitor at Bon Hotel Hyatti, Chevron')">Bon Hotel Hyatti</button>
     </div>
     <div id="base-name">Live Monitor at Escravos Terminal, Chevron</div>
     <div id="weather"></div>
     <canvas id="tempChart"></canvas>
-    <div class="log-panel" id="log"></div>
+    <div id="history"></div>
   </div>
-  <audio id="ambient" src="https://actions.google.com/sounds/v1/ambiences/countryside_day.ogg" loop></audio>
+  <audio id="ambientSound" loop autoplay volume="0.2">
+    <source src="https://cdn.pixabay.com/download/audio/2022/07/13/audio_6fbc8d6e62.mp3?filename=ambient-space-11476.mp3" type="audio/mpeg">
+  </audio>
   <script>
-    let base = 'Escravos Terminal, Chevron';
+    let base = 'Live Monitor at Escravos Terminal, Chevron';
     let countdown = 600;
     let chart;
     let temperatureData = [];
-    let fluctuatedTemp = 70, fluctuatedHumidity = 50, fluctuatedWind = 5;
-    let realTemp = 70, realHumidity = 50, realWind = 5;
-    const ctx = document.getElementById('tempChart').getContext('2d');
-    const ambientSound = document.getElementById('ambient');
-    ambientSound.volume = 0.2;
-    ambientSound.play();function switchBase(newBase) {
+    let baseColor = {
+      "Escravos": "#0ff",
+      "Meren": "#f0f",
+      "Bon": "#0f0"
+    };
+    let liveTemp = 70;
+    const ctx = document.getElementById('tempChart').getContext('2d');function switchBase(newBase) {
   base = newBase;
-  document.getElementById('base-name').innerText = 'Live Monitor at ' + newBase;
-  fetchWeather();
+  document.getElementById('base-name').style.opacity = 0;
+  setTimeout(() => {
+    document.getElementById('base-name').innerText = newBase;
+    document.getElementById('base-name').style.opacity = 1;
+    fetchWeather();
+  }, 400);
 }
 
 function updateCountdown() {
@@ -142,44 +124,42 @@ async function fetchWeather() {
   const response = await fetch(url);
   const data = await response.json();
 
-  realTemp = data.main.temp;
-  realHumidity = data.main.humidity;
-  realWind = data.wind.speed;
+  const temp = data.main.temp;
+  const humidity = data.main.humidity;
+  const windSpeed = data.wind.speed;
   const weather = data.weather[0].description;
+  liveTemp = temp;
 
-  logData(realTemp, realHumidity, realWind, weather);
+  logHistory(temp, humidity, windSpeed, weather);
 }
 
-function fluctuateValues() {
-  fluctuatedTemp = (realTemp + (Math.random() * 1.5 - 0.7)).toFixed(2);
-  fluctuatedHumidity = (realHumidity + (Math.random() * 2 - 1)).toFixed(1);
-  fluctuatedWind = (realWind + (Math.random() * 1.5 - 0.5)).toFixed(2);
-
-  document.getElementById('weather').innerHTML = `
-    <div class="data-point"><strong>Temperature:</strong> ${fluctuatedTemp} °F</div>
-    <div class="data-point"><strong>Humidity:</strong> ${fluctuatedHumidity}%</div>
-    <div class="data-point"><strong>Wind Speed:</strong> ${fluctuatedWind} mph</div>
-  `;
-
-  temperatureData.push(fluctuatedTemp);
-  if (temperatureData.length > 20) temperatureData.shift();
-  updateChart();
+function logHistory(temp, humidity, windSpeed, weather) {
+  const historyDiv = document.getElementById('history');
+  const now = new Date();
+  const time = now.toLocaleTimeString();
+  const entry = `<div>[${time}] Temp: ${temp} °F | Humidity: ${humidity}% | Wind: ${windSpeed} mph | ${weather}</div>`;
+  historyDiv.innerHTML = entry + historyDiv.innerHTML;
 }
 
 function updateChart() {
+  const fluctuation = (Math.random() * 1.5 - 0.7);
+  const currentTemp = parseFloat((liveTemp + fluctuation).toFixed(2));
+  temperatureData.push(currentTemp);
+  if (temperatureData.length > 30) temperatureData.shift();
+
   if (!chart) {
     chart = new Chart(ctx, {
       type: 'line',
       data: {
         labels: Array.from({ length: temperatureData.length }, (_, i) => i + 1),
         datasets: [{
-          label: 'Temperature Fluctuation',
+          label: 'Live Temperature (°F)',
           data: temperatureData,
-          borderColor: 'rgba(255,0,255,1)',
-          backgroundColor: getGradient(),
+          borderColor: '#0ff',
+          backgroundColor: 'rgba(0,255,255,0.2)',
           fill: true,
-          tension: 0.3,
-          pointRadius: 2,
+          tension: 0.4,
+          pointRadius: 0,
           borderWidth: 2
         }]
       },
@@ -187,7 +167,12 @@ function updateChart() {
         animation: false,
         responsive: true,
         scales: {
-          y: { beginAtZero: false }
+          y: {
+            beginAtZero: false
+          },
+          x: {
+            display: false
+          }
         }
       }
     });
@@ -198,25 +183,10 @@ function updateChart() {
   }
 }
 
-function getGradient() {
-  const gradient = ctx.createLinearGradient(0, 0, 0, 400);
-  gradient.addColorStop(0, 'red');
-  gradient.addColorStop(0.5, 'orange');
-  gradient.addColorStop(1, 'violet');
-  return gradient;
-}
-
-function logData(temp, hum, wind, condition) {
-  const log = document.getElementById('log');
-  const time = new Date().toLocaleTimeString();
-  const entry = `<div class="log-entry">[${time}] Temp: ${temp} °F | Hum: ${hum}% | Wind: ${wind} mph | Cond: ${condition}</div>`;
-  log.innerHTML = entry + log.innerHTML;
-}
-
 fetchWeather();
 setInterval(updateCountdown, 1000);
-setInterval(fluctuateValues, 1000);
+setInterval(updateChart, 1000);
 
   </script>
 </body>
-</html>
+    </html>

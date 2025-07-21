@@ -36,6 +36,10 @@
       cursor: pointer;
       transition: all 0.4s ease;
     }
+    .base-btn.active {
+      background: #0ff;
+      color: #000;
+    }
     button:hover {
       background: #0ff;
       color: #000;
@@ -73,6 +77,11 @@
       text-align: center;
       color: #0ff;
     }
+    #history li {
+      padding: 5px 0;
+      border-bottom: 1px dashed #0ff;
+      color: #ccc;
+    }
     audio {
       display: none;
     }
@@ -83,9 +92,9 @@
   <div class="countdown-timer" id="countdown">Next update in 10:00</div>
   <div class="container">
     <div style="text-align:center;">
-      <button onclick="switchBase('Live Monitor at Escravos Terminal, Chevron')">Escravos Terminal</button>
-      <button onclick="switchBase('Live Monitor at Meren Platform, Chevron')">Meren Platform</button>
-      <button onclick="switchBase('Live Monitor at Bon Hotel Hyatti')">Bon Hotel Hyatti</button>
+      <button class="base-btn active" onclick="switchBase(this, 'Live Monitor at Escravos Terminal, Chevron')">Escravos Terminal</button>
+      <button class="base-btn" onclick="switchBase(this, 'Live Monitor at Meren Platform, Chevron')">Meren Platform</button>
+      <button class="base-btn" onclick="switchBase(this, 'Live Monitor at Bon Hotel Hyatti')">Bon Hotel Hyatti</button>
     </div>
     <div id="base-name">Live Monitor at Escravos Terminal, Chevron</div>
     <div id="weather"></div>
@@ -118,7 +127,10 @@
       ambient.play().catch(() => {});
     }
 
-    function switchBase(newBase) {
+    function switchBase(btn, newBase) {
+      document.querySelectorAll('.base-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
       document.getElementById('base-name').style.opacity = 0;
       setTimeout(() => {
         base = newBase;
@@ -140,87 +152,36 @@
     }
 
     async function fetchWeather() {
-      const url = `https://api.openweathermap.org/data/2.5/weather?q=Warri,NG&appid=7ce545e8426a719062d9f8a7795d1e56&units=imperial`;
-      const response = await fetch(url);
-      const data = await response.json();
+      try {
+        const url = `https://api.openweathermap.org/data/2.5/weather?q=Warri,NG&appid=7ce545e8426a719062d9f8a7795d1e56&units=imperial`;
+        const response = await fetch(url);
+        const data = await response.json();
 
-      currentTemp = data.main.temp;
-      humidity = data.main.humidity;
-      windSpeed = data.wind.speed;
-      weather = data.weather[0].description;
+        if (!data || !data.main) throw new Error("Invalid data");
 
-      const log = document.createElement('li');
-      log.innerHTML = `<strong>${new Date().toLocaleTimeString()}</strong>: ${currentTemp.toFixed(1)}°F, ${humidity}% Humidity, ${windSpeed}mph, ${weather}`;
-      historyList.prepend(log);
+        currentTemp = data.main.temp;
+        humidity = data.main.humidity;
+        windSpeed = data.wind.speed;
+        weather = data.weather[0].description;
 
-      if (historyList.children.length > 30) {
-        historyList.removeChild(historyList.lastChild);
+        const log = document.createElement('li');
+        log.innerHTML = `<strong>${new Date().toLocaleTimeString()}</strong>: ${currentTemp.toFixed(1)}°F, ${humidity}% Humidity, ${windSpeed}mph, ${weather}`;
+        historyList.prepend(log);
+
+        if (historyList.children.length > 30) {
+          historyList.removeChild(historyList.lastChild);
+        }
+      } catch (e) {
+        const errorLog = document.createElement('li');
+        errorLog.style.color = 'red';
+        errorLog.innerText = `⚠️ Failed to fetch data: ${e.message}`;
+        historyList.prepend(errorLog);
       }
     }
 
     function updateDisplay() {
-      // Minor random fluctuation
-      let fluctuatedTemp = (currentTemp + (Math.random() * 1.4 - 0.7)).toFixed(2);
-      let fluctuatedHumidity = (humidity + (Math.random() * 2 - 1)).toFixed(1);
-      let fluctuatedWind = (windSpeed + (Math.random() * 1.2 - 0.6)).toFixed(1);
+      let fluctuatedTemp = +(currentTemp + (Math.random() * 1.4 - 0.7)).toFixed(2);
+      let fluctuatedHumidity = +(humidity + (Math.random() * 2 - 1)).toFixed(1);
+      let fluctuatedWind = +(windSpeed + (Math.random() * 1.2 - 0.6)).toFixed(1);
 
-      document.getElementById('weather').innerHTML = `
-        <div class="data-point"><strong>Temperature:</strong> ${fluctuatedTemp} °F</div>
-        <div class="data-point"><strong>Humidity:</strong> ${fluctuatedHumidity}%</div>
-        <div class="data-point"><strong>Wind Speed:</strong> ${fluctuatedWind} mph</div>
-        <div class="data-point"><strong>Condition:</strong> ${weather}</div>
-      `;
-
-      temperatureData.push(fluctuatedTemp);
-      if (temperatureData.length > 30) temperatureData.shift();
-      updateChart();
-    }
-
-    function updateChart() {
-      if (chart) chart.destroy();
-      const gradient = ctx.createLinearGradient(0, 0, 0, 400);
-      gradient.addColorStop(0, 'magenta');
-      gradient.addColorStop(0.5, 'cyan');
-      gradient.addColorStop(1, 'blue');
-
-      chart = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: Array.from({ length: temperatureData.length }, (_, i) => i + 1),
-          datasets: [{
-            label: 'Temperature Fluctuation',
-            data: temperatureData,
-            borderColor: '#0ff',
-            backgroundColor: gradient,
-            fill: true,
-            tension: 0.4,
-            pointRadius: 0,
-            borderWidth: 2
-          }]
-        },
-        options: {
-          animation: {
-            duration: 500
-          },
-          scales: {
-            y: {
-              beginAtZero: false
-            }
-          },
-          plugins: {
-            legend: {
-              labels: {
-                color: '#0ff'
-              }
-            }
-          }
-        }
-      });
-    }
-
-    fetchWeather();
-    setInterval(updateCountdown, 1000);
-    setInterval(updateDisplay, 1000);
-  </script>
-</body>
-</html>
+      document.getElementById('weather').

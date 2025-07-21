@@ -1,35 +1,88 @@
-<!DOCTYPE html><html lang="en">
+<!DOCTYPE html>
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Weather Monitor</title>
-  <link rel="stylesheet" href="style.css"/>
+  <title>Live Weather Monitor</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #0d0d0d;
+      color: #ffffff;
+      margin: 0;
+      padding: 0;
+    }
+    .banner {
+      background: linear-gradient(to right, #00c6ff, #0072ff);
+      text-align: center;
+      padding: 20px;
+      font-size: 30px;
+      font-weight: bold;
+      color: white;
+    }
+    .countdown-timer {
+      text-align: center;
+      font-size: 24px;
+      font-weight: bold;
+      margin-top: 10px;
+      color: #00ff99;
+    }
+    .container {
+      max-width: 800px;
+      margin: auto;
+      padding: 20px;
+    }
+    button {
+      margin: 5px;
+      padding: 10px 15px;
+      font-size: 14px;
+      cursor: pointer;
+      background: #444;
+      color: white;
+      border: none;
+      border-radius: 5px;
+    }
+    #base-name {
+      text-align: center;
+      font-size: 20px;
+      margin: 10px 0;
+      font-weight: bold;
+    }
+    .data-point {
+      margin: 5px 0;
+      font-size: 18px;
+    }
+    canvas {
+      margin-top: 20px;
+    }
+  </style>
 </head>
 <body>
   <div class="banner">LIGHTHOUSE LABS</div>
-  <div class="countdown-timer" id="countdown">Next update in 10:00</div>  <div class="container">
+  <div class="countdown-timer" id="countdown">Next update in 10:00</div>
+  <div class="container">
     <div style="text-align: center;">
-      <button onclick="switchBase('Escravos Terminal')">Escravos Terminal</button>
-      <button onclick="switchBase('Dibi (Abiteye) Flow Station')">Dibi Flow Station</button>
-      <button onclick="switchBase('Bon Hotel Hyatti, Warri')">Bon Hotel Hyatti</button>
-    </div><div id="base-name">Live Monitor at Escravos Terminal, Chevron</div>
-<div id="weather"></div>
-<canvas id="tempChart"></canvas>
+      <button onclick="switchBase('Escravos Terminal')">Live Monitor at Escravos Terminal, Chevron</button>
+      <button onclick="switchBase('Okan Platform')">Live Monitor at Okan Platform, Chevron</button>
+      <button onclick="switchBase('Bon Hotel Hyatti, Warri')">Bon Hotel Hyatti, Warri</button>
+    </div>
+    <div id="base-name">Live Monitor at Escravos Terminal, Chevron</div>
+    <div id="weather"></div>
+    <canvas id="tempChart"></canvas>
+  </div>
 
-  </div>  <script>
+  <script>
     let base = 'Escravos Terminal';
     let countdown = 600;
     let chart;
     let temperatureData = [];
-    let latestTemp = 0;
-    let latestHumidity = 0;
-    let latestWindSpeed = 0;
     const ctx = document.getElementById('tempChart').getContext('2d');
 
     function switchBase(newBase) {
       base = newBase;
-      document.getElementById('base-name').innerText = `Live Monitor at ${newBase}, Chevron`;
+      document.getElementById('base-name').innerText =
+        newBase.includes("Chevron") ? `Live Monitor at ${newBase}, Chevron` : newBase;
       fetchWeather();
     }
 
@@ -44,40 +97,7 @@
       }
     }
 
-    async function fetchWeather() {
-      const url = `https://api.openweathermap.org/data/2.5/weather?q=Warri,NG&appid=7ce545e8426a719062d9f8a7795d1e56&units=imperial`;
-      const response = await fetch(url);
-      const data = await response.json();
-
-      latestTemp = data.main.temp;
-      latestHumidity = data.main.humidity;
-      latestWindSpeed = data.wind.speed;
-      const weather = data.weather[0].description;
-
-      document.getElementById('weather').setAttribute('data-condition', weather);
-    }
-
-    function simulateFluctuation() {
-      let temp = (latestTemp + (Math.random() * 1.5 - 0.7)).toFixed(2);
-      let humidity = (latestHumidity + (Math.random() * 1.2 - 0.6)).toFixed(1);
-      let windSpeed = (latestWindSpeed + (Math.random() * 0.8 - 0.4)).toFixed(1);
-      const condition = document.getElementById('weather').getAttribute('data-condition') || '';
-
-      temperatureData.push(temp);
-      if (temperatureData.length > 20) temperatureData.shift();
-
-      document.getElementById('weather').innerHTML = `
-        <div class="data-point"><strong>Temperature:</strong> ${temp} °F</div>
-        <div class="data-point"><strong>Humidity:</strong> ${humidity}%</div>
-        <div class="data-point"><strong>Wind Speed:</strong> ${windSpeed} mph</div>
-        <div class="data-point"><strong>Condition:</strong> ${condition}</div>
-      `;
-
-      updateChart();
-    }
-
-    function updateChart() {
-      if (chart) chart.destroy();
+    function initializeChart() {
       const gradient = ctx.createLinearGradient(0, 0, 0, 400);
       gradient.addColorStop(0, 'red');
       gradient.addColorStop(0.5, 'orange');
@@ -88,7 +108,7 @@
         data: {
           labels: Array.from({ length: temperatureData.length }, (_, i) => i + 1),
           datasets: [{
-            label: 'Temperature Fluctuation',
+            label: 'Temperature Fluctuation (°F)',
             data: temperatureData,
             borderColor: 'rgba(255,0,255,1)',
             backgroundColor: gradient,
@@ -99,7 +119,7 @@
           }]
         },
         options: {
-          responsive: true,
+          animation: false,
           scales: {
             y: {
               beginAtZero: false
@@ -109,8 +129,54 @@
       });
     }
 
+    function updateChartData(newTemp) {
+      temperatureData.push(newTemp);
+      if (temperatureData.length > 20) temperatureData.shift();
+      chart.data.labels = Array.from({ length: temperatureData.length }, (_, i) => i + 1);
+      chart.data.datasets[0].data = temperatureData;
+      chart.update();
+    }
+
+    async function fetchWeather() {
+      const url = `https://api.openweathermap.org/data/2.5/weather?q=Warri,NG&appid=7ce545e8426a719062d9f8a7795d1e56&units=imperial`;
+      const response = await fetch(url);
+      const data = await response.json();
+
+      const temp = data.main.temp;
+      const humidity = data.main.humidity;
+      const windSpeed = data.wind.speed;
+      const condition = data.weather[0].description;
+
+      document.getElementById('weather').setAttribute('data-base-temp', temp);
+      document.getElementById('weather').setAttribute('data-base-humidity', humidity);
+      document.getElementById('weather').setAttribute('data-base-wind', windSpeed);
+      document.getElementById('weather').setAttribute('data-condition', condition);
+    }
+
+    function fluctuateDisplay() {
+      const baseTemp = parseFloat(document.getElementById('weather').getAttribute('data-base-temp')) || 70;
+      const baseHumidity = parseFloat(document.getElementById('weather').getAttribute('data-base-humidity')) || 50;
+      const baseWind = parseFloat(document.getElementById('weather').getAttribute('data-base-wind')) || 5;
+      const condition = document.getElementById('weather').getAttribute('data-condition') || 'clear';
+
+      const fluctuatedTemp = (baseTemp + (Math.random() * 1.5 - 0.5)).toFixed(2);
+      const fluctuatedHumidity = (baseHumidity + (Math.random() * 2 - 1)).toFixed(1);
+      const fluctuatedWind = (baseWind + (Math.random() * 0.5 - 0.2)).toFixed(2);
+
+      document.getElementById('weather').innerHTML = `
+        <div class="data-point"><strong>Temperature:</strong> ${fluctuatedTemp} °F</div>
+        <div class="data-point"><strong>Humidity:</strong> ${fluctuatedHumidity}%</div>
+        <div class="data-point"><strong>Wind Speed:</strong> ${fluctuatedWind} mph</div>
+        <div class="data-point"><strong>Condition:</strong> ${condition}</div>
+      `;
+
+      updateChartData(fluctuatedTemp);
+    }
+
+    initializeChart();
     fetchWeather();
     setInterval(updateCountdown, 1000);
-    setInterval(simulateFluctuation, 1000);
-  </script></body>
+    setInterval(fluctuateDisplay, 1000);
+  </script>
+</body>
 </html>

@@ -3,251 +3,265 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Lighthouse Live Monitor</title>
+  <title>BON Hotel Hyatti Warri - Room Rates</title>
   <style>
-    body {
-      background: #01010a;
-      color: #0ff;
-      font-family: 'Orbitron', sans-serif;
+    * { box-sizing: border-box; }
+    body, html {
       margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      height: 100%;
       overflow-x: hidden;
     }
 
-    .banner {
-      text-align: center;
-      font-size: 2.5rem;
-      padding: 20px 0;
-      background: linear-gradient(90deg, #0ff, #00f, #f0f);
-      background-clip: text;
-      -webkit-background-clip: text;
-      color: transparent;
-      animation: flicker 2s infinite;
+    /* Background slideshow */
+    .slideshow {
+      position: fixed;
+      z-index: -1;
+      top: 0; left: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
     }
-
-    @keyframes flicker {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.8; }
+    .slide {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0;
+      transition: opacity 2s ease-in-out;
+    }
+    .slide.active {
+      opacity: 1;
     }
 
     .container {
-      padding: 20px;
-      text-align: center;
       max-width: 900px;
-      margin: auto;
+      margin: 50px auto;
+      background: rgba(255, 255, 255, 0.85);
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.2);
     }
 
-    button {
-      margin: 8px;
-      padding: 12px 18px;
-      border: 1px solid #0ff;
-      background: transparent;
-      color: #0ff;
-      font-weight: bold;
-      font-size: 1rem;
-      cursor: pointer;
-      border-radius: 6px;
-      transition: all 0.3s ease;
-      box-shadow: 0 0 10px #0ff44a;
-    }
-
-    button:hover {
-      background: #0ff;
-      color: #000;
-      box-shadow: 0 0 20px #0ff;
-    }
-
-    #base-name {
-      margin-top: 25px;
-      font-size: 1.5rem;
-      min-height: 2.5rem;
-      transition: opacity 0.5s ease;
-    }
-
-    #base-name.loading::after {
-      content: 'Loading...';
-      font-size: 1rem;
-      color: #f0f;
-      display: block;
-      margin-top: 5px;
-      animation: pulse 1s infinite;
-    }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 0.6; }
-      50% { opacity: 1; }
-    }
-
-    #countdown {
+    h1 {
       text-align: center;
-      margin: 10px 0;
-      font-size: 1.1rem;
-      color: #aaa;
+      color: #003366;
+      margin-bottom: 20px;
     }
 
-    .data-point {
-      margin: 6px 0;
+    table {
+      width: 100%;
+      border-collapse: collapse;
     }
 
-    canvas {
-      width: 100% !important;
-      max-width: 100%;
-      height: 300px;
-      margin-top: 30px;
-      border: 1px solid #0ff3;
-      border-radius: 10px;
-      background: #00000044;
-      box-shadow: 0 0 10px #0ff3;
+    th, td {
+      border: 1px solid #ddd;
+      padding: 12px;
+      text-align: center;
     }
 
-    #history {
-      text-align: left;
-      margin-top: 40px;
-      max-height: 180px;
-      overflow-y: auto;
-      border-top: 1px solid #0ff;
-      padding-top: 10px;
-      font-size: 0.95rem;
+    th {
+      background-color: #003366;
+      color: white;
     }
 
-    /* Scrollbar style */
-    #history::-webkit-scrollbar {
-      width: 5px;
+    tr:nth-child(even) {
+      background-color: #f2f2f2;
     }
-    #history::-webkit-scrollbar-thumb {
-      background: #0ff;
+
+    .note, .footer, .contact, .powered {
+      margin-top: 20px;
+      font-size: 14px;
+      color: #333;
+      text-align: center;
     }
+
+    .star-rating {
+      margin-top: 20px;
+      text-align: center;
+      font-size: 18px;
+    }
+
+    .stars {
+      color: gold;
+      font-size: 24px;
+    }
+
+    #visitor-count {
+      position: fixed;
+      bottom: 10px;
+      right: 15px;
+      background: #003366;
+      color: white;
+      padding: 8px 15px;
+      border-radius: 5px;
+      font-size: 14px;
+    }
+
+    .admin-btn {
+      position: fixed;
+      top: 15px;
+      right: 15px;
+      background: #003366;
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    #admin-login {
+      display: none;
+      text-align: center;
+      margin-top: 20px;
+    }
+
+    #comments {
+      display: none;
+      margin-top: 20px;
+    }
+
+    textarea {
+      width: 100%;
+      height: 80px;
+      margin-bottom: 10px;
+    }
+
+    .comment-box {
+      background: #eee;
+      padding: 10px;
+      margin: 5px 0;
+      border-left: 4px solid #003366;
+    }
+
   </style>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron&display=swap" rel="stylesheet">
 </head>
 <body>
-  <div class="banner">LIGHTHOUSE LABS</div>
-  <div class="countdown-timer" id="countdown">Next update in 10:00</div>
-  <div class="container">
-    <div>
-      <button onclick="switchBase('Live Monitor at Escravos Terminal, Chevron')">Escravos Terminal</button>
-      <button onclick="switchBase('Live Monitor at Meren Platform, Chevron')">Meren Platform</button>
-      <button onclick="switchBase('Live Monitor at Bon Hotel Hyatti, Chevron')">Bon Hotel Hyatti</button>
-    </div>
-    <div id="base-name">Live Monitor at Escravos Terminal, Chevron</div>
-    <div id="weather"></div>
-    <canvas id="tempChart"></canvas>
-    <div id="history"></div>
+
+  <!-- Slideshow -->
+  <div class="slideshow">
+    <img src="img.jpeg" class="slide active" />
+    <img src="img1.jpeg" class="slide" />
+    <img src="img2.jpeg" class="slide" />
+    <img src="img3.jpeg" class="slide" />
+    <img src="img4.jpeg" class="slide" />
   </div>
 
-  <audio id="ambientSound" loop autoplay volume="0.2">
-    <source src="https://cdn.pixabay.com/download/audio/2022/07/13/audio_6fbc8d6e62.mp3?filename=ambient-space-11476.mp3" type="audio/mpeg">
-  </audio>
+  <!-- Admin Login Button -->
+  <button class="admin-btn" onclick="showLogin()">Admin</button>
 
+  <!-- Room Rates Table -->
+  <div class="container">
+    <h1>BON Hotel Hyatti Warri<br>Room Rates</h1>
+    <table>
+      <thead>
+        <tr>
+          <th>Room Type</th>
+          <th>Best Available Rate</th>
+          <th>BONami Rate<br><small>(10% Off with Membership)</small></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Studio Room</td><td>₦112,000.00</td><td>₦108,800.00</td></tr>
+        <tr><td>Classic Room</td><td>₦120,000.00</td><td>₦108,000.00</td></tr>
+        <tr><td>Deluxe Room</td><td>₦146,000.00</td><td>₦131,400.00</td></tr>
+        <tr><td>Royal Room</td><td>₦180,000.00</td><td>₦162,000.00</td></tr>
+        <tr><td>Executive Suite</td><td>₦260,000.00</td><td>₦234,000.00</td></tr>
+        <tr><td>Ambassador Suite</td><td>₦300,000.00</td><td>₦270,000.00</td></tr>
+        <tr><td>Self Catering Suite</td><td>₦300,000.00</td><td>₦270,000.00</td></tr>
+      </tbody>
+    </table>
+
+    <div class="note">
+      Single Rooms come with complimentary breakfast for 1 person.<br>
+      All Suites include breakfast for 2 persons, and complimentary access to pool and gym.
+    </div>
+
+    <div class="star-rating">
+      Overall Rating: <span class="stars">★★★★☆</span> (4.0 / 5)
+    </div>
+
+    <div class="contact">
+      Address: BON Hotel Hyatti Warri, Airport Road, Warri, Delta State, Nigeria<br>
+      Phone: +234 803 123 4567, +234 802 987 6543
+    </div>
+
+    <div class="note">To make reservations, kindly contact the hotel directly.</div>
+
+    <div class="footer">
+      Contact the web designer: <a href="mailto:walkernight365@gmail.com">walkernight365@gmail.com</a>
+    </div>
+
+    <div class="powered">Powered by Lighthouse</div>
+
+    <!-- Admin Login -->
+    <div id="admin-login">
+      <input type="password" id="admin-password" placeholder="Enter Admin Password" />
+      <button onclick="verifyPassword()">Submit</button>
+    </div>
+
+    <!-- Hidden Comments Section -->
+    <div id="comments">
+      <h3>Guest Comments</h3>
+      <textarea id="new-comment" placeholder="Leave a comment..."></textarea>
+      <button onclick="addComment()">Post Comment</button>
+      <div id="comment-list"></div>
+    </div>
+  </div>
+
+  <!-- Visitor Counter -->
+  <div id="visitor-count">Visitors: <span id="count">0</span></div>
+
+  <!-- Scripts -->
   <script>
-    let base = 'Live Monitor at Escravos Terminal, Chevron';
-    let countdown = 600;
-    let chart;
-    let temperatureData = [];
-    let liveTemp = 70;
+    // Slideshow logic
+    const slides = document.querySelectorAll('.slide');
+    let current = 0;
+    setInterval(() => {
+      slides[current].classList.remove('active');
+      current = (current + 1) % slides.length;
+      slides[current].classList.add('active');
+    }, 5000);
 
-    const ctx = document.getElementById('tempChart').getContext('2d');
+    // Visitor Counter
+    let visits = localStorage.getItem("visitCount") || 0;
+    visits++;
+    localStorage.setItem("visitCount", visits);
+    document.getElementById("count").innerText = visits;
 
-    function switchBase(newBase) {
-      base = newBase;
-      const baseElement = document.getElementById('base-name');
-      baseElement.classList.add('loading');
-      baseElement.style.opacity = 0.2;
-
-      setTimeout(() => {
-        baseElement.innerText = newBase;
-        baseElement.classList.remove('loading');
-        baseElement.style.opacity = 1;
-        fetchWeather();
-      }, 1000);
+    // Admin functions
+    function showLogin() {
+      document.getElementById("admin-login").style.display = "block";
     }
 
-    function updateCountdown() {
-      const minutes = String(Math.floor(countdown / 60)).padStart(2, '0');
-      const seconds = String(countdown % 60).padStart(2, '0');
-      document.getElementById('countdown').innerText = `Next update in ${minutes}:${seconds}`;
-      countdown--;
-      if (countdown < 0) {
-        countdown = 600;
-        fetchWeather();
-      }
-    }
-
-    async function fetchWeather() {
-      const url = `https://api.openweathermap.org/data/2.5/weather?q=Warri,NG&appid=7ce545e8426a719062d9f8a7795d1e56&units=imperial`;
-      const response = await fetch(url);
-      const data = await response.json();
-
-      const temp = data.main.temp;
-      const humidity = data.main.humidity;
-      const windSpeed = data.wind.speed;
-      const weather = data.weather[0].description;
-      liveTemp = temp;
-
-      logHistory(temp, humidity, windSpeed, weather);
-    }
-
-    function logHistory(temp, humidity, windSpeed, weather) {
-      const historyDiv = document.getElementById('history');
-      const now = new Date();
-      const time = now.toLocaleTimeString();
-      const entry = `<div>[${time}] Temp: ${temp} °F | Humidity: ${humidity}% | Wind: ${windSpeed} mph | ${weather}</div>`;
-      historyDiv.innerHTML = entry + historyDiv.innerHTML;
-    }
-
-    function updateChart() {
-      const fluctuation = (Math.random() * 1.5 - 0.7);
-      const currentTemp = parseFloat((liveTemp + fluctuation).toFixed(2));
-      temperatureData.push(currentTemp);
-      if (temperatureData.length > 30) temperatureData.shift();
-
-      if (!chart) {
-        chart = new Chart(ctx, {
-          type: 'line',
-          data: {
-            labels: Array.from({ length: temperatureData.length }, (_, i) => i + 1),
-            datasets: [{
-              label: 'Live Temperature (°F)',
-              data: temperatureData,
-              borderColor: '#0ff',
-              backgroundColor: 'rgba(0,255,255,0.2)',
-              fill: true,
-              tension: 0.4,
-              pointRadius: 0,
-              borderWidth: 2
-            }]
-          },
-          options: {
-            animation: false,
-            responsive: true,
-            scales: {
-              y: {
-                beginAtZero: false,
-                ticks: { color: '#0ff' },
-                grid: { color: '#333' }
-              },
-              x: {
-                display: false,
-                grid: { color: '#333' }
-              }
-            },
-            plugins: {
-              legend: {
-                labels: { color: '#0ff' }
-              }
-            }
-          }
-        });
+    function verifyPassword() {
+      const pass = document.getElementById("admin-password").value.toLowerCase();
+      if (pass === "naruto") {
+        document.getElementById("comments").style.display = "block";
+        document.getElementById("admin-login").style.display = "none";
+        loadComments();
       } else {
-        chart.data.labels = Array.from({ length: temperatureData.length }, (_, i) => i + 1);
-        chart.data.datasets[0].data = temperatureData;
-        chart.update();
+        alert("Incorrect password");
       }
     }
 
-    fetchWeather();
-    setInterval(updateCountdown, 1000);
-    setInterval(updateChart, 1000);
+    // Comments
+    function addComment() {
+      const text = document.getElementById("new-comment").value.trim();
+      if (!text) return;
+      let stored = JSON.parse(localStorage.getItem("comments") || "[]");
+      stored.push(text);
+      localStorage.setItem("comments", JSON.stringify(stored));
+      document.getElementById("new-comment").value = "";
+      loadComments();
+    }
+
+    function loadComments() {
+      let stored = JSON.parse(localStorage.getItem("comments") || "[]");
+      document.getElementById("comment-list").innerHTML =
+        stored.map(c => `<div class="comment-box">${c}</div>`).join('');
+    }
   </script>
 </body>
-</html>
+  </html>

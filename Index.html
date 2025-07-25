@@ -2,266 +2,102 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>BON Hotel Hyatti Warri - Room Rates</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>What's My IP?</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
   <style>
-    * { box-sizing: border-box; }
-    body, html {
+    body {
       margin: 0;
       padding: 0;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      height: 100%;
-      overflow-x: hidden;
+      font-family: 'Poppins', sans-serif;
+      background-color: #111;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      text-align: center;
+      padding: 20px;
     }
-
-    /* Background slideshow */
-    .slideshow {
-      position: fixed;
-      z-index: -1;
-      top: 0; left: 0;
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-    }
-    .slide {
-      position: absolute;
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      opacity: 0;
-      transition: opacity 2s ease-in-out;
-    }
-    .slide.active {
-      opacity: 1;
-    }
-
-    .container {
-      max-width: 900px;
-      margin: 50px auto;
-      background: rgba(255, 255, 255, 0.85);
+    .ip-box {
+      background: #222;
       padding: 30px;
-      border-radius: 8px;
-      box-shadow: 0 0 20px rgba(0,0,0,0.2);
+      border-radius: 10px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.4);
+      max-width: 480px;
+      width: 100%;
+      margin-bottom: 30px;
     }
-
     h1 {
-      text-align: center;
-      color: #003366;
-      margin-bottom: 20px;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-
-    th, td {
-      border: 1px solid #ddd;
-      padding: 12px;
-      text-align: center;
-    }
-
-    th {
-      background-color: #003366;
-      color: white;
-    }
-
-    tr:nth-child(even) {
-      background-color: #f2f2f2;
-    }
-
-    .note, .footer, .contact, .powered {
-      margin-top: 20px;
-      font-size: 14px;
-      color: #333;
-      text-align: center;
-    }
-
-    .star-rating {
-      margin-top: 20px;
-      text-align: center;
-      font-size: 18px;
-    }
-
-    .stars {
-      color: gold;
-      font-size: 24px;
-    }
-
-    #visitor-count {
-      position: fixed;
-      bottom: 10px;
-      right: 15px;
-      background: #003366;
-      color: white;
-      padding: 8px 15px;
-      border-radius: 5px;
-      font-size: 14px;
-    }
-
-    .admin-btn {
-      position: fixed;
-      top: 15px;
-      right: 15px;
-      background: #003366;
-      color: white;
-      border: none;
-      padding: 8px 12px;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-
-    #admin-login {
-      display: none;
-      text-align: center;
-      margin-top: 20px;
-    }
-
-    #comments {
-      display: none;
-      margin-top: 20px;
-    }
-
-    textarea {
-      width: 100%;
-      height: 80px;
+      color: #ffc107;
       margin-bottom: 10px;
     }
-
-    .comment-box {
-      background: #eee;
-      padding: 10px;
-      margin: 5px 0;
-      border-left: 4px solid #003366;
+    .info {
+      margin: 8px 0;
+      font-size: 16px;
     }
-
+    button {
+      margin-top: 15px;
+      padding: 10px 20px;
+      background-color: #ffc107;
+      color: #111;
+      border: none;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .ad-box {
+      margin-top: 20px;
+    }
   </style>
 </head>
 <body>
 
-  <!-- Slideshow -->
-  <div class="slideshow">
-    <img src="img.jpeg" class="slide active" />
-    <img src="img1.jpeg" class="slide" />
-    <img src="img2.jpeg" class="slide" />
-    <img src="img3.jpeg" class="slide" />
-    <img src="img4.jpeg" class="slide" />
+  <div class="ip-box">
+    <h1>Your IP Address</h1>
+    <div class="info" id="ip">Detecting...</div>
+    <div class="info" id="isp"></div>
+    <div class="info" id="location"></div>
+    <div class="info" id="ua"></div>
+    <button onclick="copyIP()">Copy IP</button>
   </div>
 
-  <!-- Admin Login Button -->
-  <button class="admin-btn" onclick="showLogin()">Admin</button>
-
-  <!-- Room Rates Table -->
-  <div class="container">
-    <h1>BON Hotel Hyatti Warri<br>Room Rates</h1>
-    <table>
-      <thead>
-        <tr>
-          <th>Room Type</th>
-          <th>Best Available Rate</th>
-          <th>BONami Rate<br><small>(10% Off with Membership)</small></th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr><td>Studio Room</td><td>₦112,000.00</td><td>₦108,800.00</td></tr>
-        <tr><td>Classic Room</td><td>₦120,000.00</td><td>₦108,000.00</td></tr>
-        <tr><td>Deluxe Room</td><td>₦146,000.00</td><td>₦131,400.00</td></tr>
-        <tr><td>Royal Room</td><td>₦180,000.00</td><td>₦162,000.00</td></tr>
-        <tr><td>Executive Suite</td><td>₦260,000.00</td><td>₦234,000.00</td></tr>
-        <tr><td>Ambassador Suite</td><td>₦300,000.00</td><td>₦270,000.00</td></tr>
-        <tr><td>Self Catering Suite</td><td>₦300,000.00</td><td>₦270,000.00</td></tr>
-      </tbody>
-    </table>
-
-    <div class="note">
-      Single Rooms come with complimentary breakfast for 1 person.<br>
-      All Suites include breakfast for 2 persons, and complimentary access to pool and gym.
-    </div>
-
-    <div class="star-rating">
-      Overall Rating: <span class="stars">★★★★☆</span> (4.0 / 5)
-    </div>
-
-    <div class="contact">
-      Address: BON Hotel Hyatti Warri, Airport Road, Warri, Delta State, Nigeria<br>
-      Phone: +234 803 123 4567, +234 802 987 6543
-    </div>
-
-    <div class="note">To make reservations, kindly contact the hotel directly.</div>
-
-    <div class="footer">
-      Contact the web designer: <a href="mailto:walkernight365@gmail.com">walkernight365@gmail.com</a>
-    </div>
-
-    <div class="powered">Powered by Lighthouse</div>
-
-    <!-- Admin Login -->
-    <div id="admin-login">
-      <input type="password" id="admin-password" placeholder="Enter Admin Password" />
-      <button onclick="verifyPassword()">Submit</button>
-    </div>
-
-    <!-- Hidden Comments Section -->
-    <div id="comments">
-      <h3>Guest Comments</h3>
-      <textarea id="new-comment" placeholder="Leave a comment..."></textarea>
-      <button onclick="addComment()">Post Comment</button>
-      <div id="comment-list"></div>
-    </div>
+  <div class="ad-box">
+    <!-- Adsterra Banner Ad (468x60) -->
+    <script type="text/javascript">  
+      atOptions = {  
+        'key' : '6cd6931c37fc427ed210ce5fd3ce7f00',  
+        'format' : 'iframe',  
+        'height' : 60,  
+        'width' : 468,  
+        'params' : {}  
+      };  
+    </script>  
+    <script type="text/javascript" src="//www.highperformanceformat.com/6cd6931c37fc427ed210ce5fd3ce7f00/invoke.js"></script>
   </div>
 
-  <!-- Visitor Counter -->
-  <div id="visitor-count">Visitors: <span id="count">0</span></div>
-
-  <!-- Scripts -->
   <script>
-    // Slideshow logic
-    const slides = document.querySelectorAll('.slide');
-    let current = 0;
-    setInterval(() => {
-      slides[current].classList.remove('active');
-      current = (current + 1) % slides.length;
-      slides[current].classList.add('active');
-    }, 5000);
-
-    // Visitor Counter
-    let visits = localStorage.getItem("visitCount") || 0;
-    visits++;
-    localStorage.setItem("visitCount", visits);
-    document.getElementById("count").innerText = visits;
-
-    // Admin functions
-    function showLogin() {
-      document.getElementById("admin-login").style.display = "block";
-    }
-
-    function verifyPassword() {
-      const pass = document.getElementById("admin-password").value.toLowerCase();
-      if (pass === "naruto") {
-        document.getElementById("comments").style.display = "block";
-        document.getElementById("admin-login").style.display = "none";
-        loadComments();
-      } else {
-        alert("Incorrect password");
+    async function getIPInfo() {
+      try {
+        const res = await fetch("https://ipapi.co/json");
+        const data = await res.json();
+        document.getElementById("ip").innerText = "IP: " + data.ip;
+        document.getElementById("isp").innerText = "ISP: " + data.org;
+        document.getElementById("location").innerText = `Location: ${data.city}, ${data.region}, ${data.country_name}`;
+        document.getElementById("ua").innerText = "Device: " + navigator.userAgent;
+      } catch (e) {
+        document.getElementById("ip").innerText = "Unable to detect IP.";
       }
     }
 
-    // Comments
-    function addComment() {
-      const text = document.getElementById("new-comment").value.trim();
-      if (!text) return;
-      let stored = JSON.parse(localStorage.getItem("comments") || "[]");
-      stored.push(text);
-      localStorage.setItem("comments", JSON.stringify(stored));
-      document.getElementById("new-comment").value = "";
-      loadComments();
+    function copyIP() {
+      const ip = document.getElementById("ip").innerText.replace("IP: ", "");
+      navigator.clipboard.writeText(ip).then(() => alert("IP copied to clipboard!"));
     }
 
-    function loadComments() {
-      let stored = JSON.parse(localStorage.getItem("comments") || "[]");
-      document.getElementById("comment-list").innerHTML =
-        stored.map(c => `<div class="comment-box">${c}</div>`).join('');
-    }
+    getIPInfo();
   </script>
+
 </body>
-  </html>
+</html>

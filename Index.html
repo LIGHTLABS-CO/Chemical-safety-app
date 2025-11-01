@@ -2,308 +2,684 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Real-time reflective sphere over 3D street (Self-contained)</title>
+  <title>Dye Mixing & Realistic Diffusion Simulator</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
   <style>
-    body { margin: 0; overflow: hidden; background: #222; }
+    body { margin: 0; padding: 0; overflow: hidden; background: #1e2030; }
     canvas { display: block; }
     #ui {
       position: absolute;
-      top: 10px; left: 10px;
-      background: rgba(0,0,0,0.6);
-      color: #fff; padding: 10px 12px;
-      border-radius: 8px; font-family: system-ui, sans-serif;
-      max-width: 320px;
+      left: 20px; top: 20px;
+      background: rgba(28,32,48,0.85);
+      color: #fff; font-family: system-ui,sans-serif;
+      border-radius: 14px; padding: 20px 22px;
+      min-width: 320px; max-width: 370px;
+      z-index: 3;
+      box-shadow: 0 4px 32px rgba(0,0,0,0.22);
+      font-size: 14px;
     }
-    #ui label { display: flex; justify-content: space-between; align-items: center; margin: 6px 0; font-size: 13px; }
-    #ui input[type=range] { width: 160px; margin-left: 8px; }
-    #ui .title { font-weight: 600; margin-bottom: 6px; }
-    #ui .row { display: flex; gap: 8px; }
-    #ui button { background: #2a2a2a; color: #fff; border: 1px solid #444; padding: 6px 8px; border-radius: 6px; cursor: pointer; }
-    #ui button:hover { background: #3a3a3a; }
+    #ui h1 { font-size: 21px; margin: 0 0 14px 0; font-weight: 800; }
+    #ui .subtitle { color: #a7c6ff; font-size: 13px; font-weight: 500; margin: 16px 0 6px 0; }
+    #ui label { display: flex; align-items: center; justify-content: space-between; margin: 8px 0; }
+    #ui input[type=range] { width: 160px; margin-left: 12px; }
+    #ui select, #ui input[type=color] { margin-left: 12px; }
+    #ui button { background: #243060; color: #fff; font-size: 13px; font-weight: 500; border: 0; border-radius: 7px; padding: 7px 16px; margin: 4px 3px 0 0; cursor: pointer; }
+    #ui button:hover { background: #3656be; }
+    #ui .row { display: flex; gap: 8px; margin-top: 8px; }
+    #ui .color-btn { width: 28px; height: 28px; border-radius: 50%; border: 2px solid #fff; margin-right: 8px; cursor: pointer; }
+    #ui .color-btn.selected { box-shadow: 0 0 0 3px #fff; }
+    #ui .info { font-size: 12px; color: #a2a6b3; margin-top: 17px;}
+    #credits {
+      position: absolute; right: 22px; bottom: 12px;
+      color: #bbc6ea; font-size: 12px; background: rgba(0,0,0,0.20);
+      padding: 8px 14px; border-radius: 8px; z-index: 3;
+      font-family: system-ui,sans-serif;
+    }
+    #credits a { color: #a7c6ff; text-decoration: none; }
+    #touchGuide {
+      position: absolute; left: 50%; top: 70px; transform: translateX(-50%);
+      color: #fff; font-size: 15px; background: rgba(30,40,60,0.85); padding: 14px 26px;
+      border-radius: 12px; z-index: 3; font-family: system-ui,sans-serif;
+      box-shadow: 0 6px 32px rgba(0,0,0,0.13);
+      pointer-events: none;
+      opacity: 0; transition: opacity 0.4s cubic-bezier(.4,.8,.2,1);
+    }
+    #touchGuide.show { opacity: 1; }
+    #ui .color-row { display: flex; gap: 7px; margin-top: 7px; }
+    #ui .swatch { width: 22px; height: 22px; border-radius: 50%; border: 2px solid #fff; margin-right: 6px; cursor: pointer; }
+    #ui .swatch.selected { box-shadow: 0 0 0 2px #fff; }
+    #ui .slider-label { width: 112px; display: inline-block; }
+    #ui .value { width: 38px; text-align: right; padding-left: 8px; font-size: 13px; color: #a7c6ff; font-weight: 500; }
+    #ui .tip { font-size: 12px; color: #7da7ff; margin-top: 6px; }
+    #ui .about {
+      margin-top: 14px;
+      font-size: 12.5px; color: #a2a6b3; line-height: 1.5;
+      background: rgba(34,40,60,0.24); padding: 9px 14px; border-radius: 7px;
+    }
+    #ui .about b { color: #a7c6ff; }
+    #resetBtn { margin-top: 10px; background: #d94343 !important; color: #fff !important; }
+    #ui .row .color-btn:last-child { margin-right: 0; }
+    #ui .slider-wrap { display: flex; align-items: center; }
+    #ui .slider-wrap input[type=range] { flex: 1; }
+    #ui .slider-wrap .value { flex: 0 0 46px; }
+    #ui .slider-wrap .slider-label { margin-right: 10px; }
+    #ui .swatch-wrap { display: flex; align-items: center; gap: 7px; }
+    #ui .swatch-label { font-size: 13px; color: #a7c6ff; margin-right: 10px; }
+    #ui .swatch-row { margin: 8px 0 0 0; }
+    @media (max-width: 780px) {
+      #ui { left: 8px; top: 8px; min-width: 0; max-width: 98vw; padding: 11px 7px;}
+      #credits { right: 8px; bottom: 8px; padding: 7px 7px;}
+      #touchGuide { font-size: 12.5px; padding: 12px 10px;}
+    }
   </style>
 </head>
 <body>
   <div id="ui">
-    <div class="title">Sphere material</div>
-    <label><span>Metalness</span><input id="metalness" type="range" min="0" max="1" step="0.01" value="1"></label>
-    <label><span>Roughness</span><input id="roughness" type="range" min="0" max="1" step="0.01" value="0.1"></label>
-    <label><span>Reflectivity</span><input id="reflectivity" type="range" min="0" max="1" step="0.01" value="1"></label>
-    <label><span>Clearcoat</span><input id="clearcoat" type="range" min="0" max="1" step="0.01" value="0.3"></label>
-    <label><span>Coat roughness</span><input id="clearcoatRoughness" type="range" min="0" max="1" step="0.01" value="0.05"></label>
-    <label><span>Sphere height</span><input id="height" type="range" min="0.5" max="4" step="0.01" value="1.6"></label>
-    <div class="title" style="margin-top:8px;">Scene</div>
-    <label><span>Env intensity</span><input id="envIntensity" type="range" min="0" max="2" step="0.01" value="1"></label>
-    <div class="row" style="margin-top:6px;">
-      <button id="toggleTone">Toggle ACES tone</button>
-      <button id="resetCam">Reset camera</button>
+    <h1>Dye Mixing Lab</h1>
+    <div class="subtitle">Dye Dropper</div>
+    <div class="color-row" id="colorRow"></div>
+    <div class="slider-wrap">
+      <span class="slider-label">Drop Size</span>
+      <input type="range" id="dropSize" min="10" max="80" step="1" value="28">
+      <span class="value" id="dropSizeVal">28</span>
     </div>
+    <div class="slider-wrap">
+      <span class="slider-label">Drop Intensity</span>
+      <input type="range" id="dropAlpha" min="0.1" max="1" step="0.01" value="0.7">
+      <span class="value" id="dropAlphaVal">0.7</span>
+    </div>
+    <div class="slider-wrap">
+      <span class="slider-label">Drop Type</span>
+      <select id="dropType">
+        <option value="circular">Circular</option>
+        <option value="splash">Splash</option>
+        <option value="spray">Spray</option>
+        <option value="ring">Ring</option>
+      </select>
+    </div>
+    <div class="row">
+      <button id="addDropBtn">Add Drop</button>
+      <button id="resetBtn">Reset</button>
+    </div>
+    <div class="tip">Tip: Try swiping or stirring to mix dyes!</div>
+    <div class="subtitle" style="margin-top:14px;">Diffusion & Mix</div>
+    <div class="slider-wrap">
+      <span class="slider-label">Diffusion Speed</span>
+      <input type="range" id="diffuseSpeed" min="0.1" max="3.5" step="0.01" value="1.3">
+      <span class="value" id="diffuseSpeedVal">1.3</span>
+    </div>
+    <div class="slider-wrap">
+      <span class="slider-label">Turbulence</span>
+      <input type="range" id="turbulence" min="0" max="0.12" step="0.001" value="0.02">
+      <span class="value" id="turbulenceVal">0.02</span>
+    </div>
+    <div class="slider-wrap">
+      <span class="slider-label">Viscosity</span>
+      <input type="range" id="viscosity" min="0.5" max="3.5" step="0.01" value="1.1">
+      <span class="value" id="viscosityVal">1.1</span>
+    </div>
+    <div class="slider-wrap">
+      <span class="slider-label">Color Smear</span>
+      <input type="range" id="smear" min="0" max="1" step="0.01" value="0.14">
+      <span class="value" id="smearVal">0.14</span>
+    </div>
+    <div class="subtitle" style="margin-top:14px;">Background</div>
+    <div class="slider-wrap">
+      <span class="slider-label">Hue</span>
+      <input type="range" id="bgHue" min="180" max="330" step="1" value="210">
+      <span class="value" id="bgHueVal">210</span>
+    </div>
+    <div class="slider-wrap">
+      <span class="slider-label">Brightness</span>
+      <input type="range" id="bgBright" min="0.05" max="0.7" step="0.01" value="0.16">
+      <span class="value" id="bgBrightVal">0.16</span>
+    </div>
+    <div class="about">
+      <b>Dye Mixing Lab</b> – Interactive simulation of dye mixing and realistic diffusion.<br>
+      <b>Swipe</b> or <b>drag</b> to stir and mix dyes.<br>
+      Uses advanced shader diffusion and physical-inspired mixing.<br>
+      <a href="https://github.com/LIGHTLABS-CO" target="_blank">By LIGHTLABS-CO</a>
+    </div>
+    <div class="info" id="info"></div>
   </div>
-
-  <!-- three.js core and controls from CDN -->
+  <div id="touchGuide">Swipe or drag to stir the dyes!</div>
+  <div id="credits">
+    Standalone dye mixing demo &copy; 2025<br/>
+    Built with three.js and custom GLSL shaders.<br/>
+    <a href="https://github.com/LIGHTLABS-CO" target="_blank">LIGHTLABS-CO</a>
+  </div>
+  <!-- three.js from CDN -->
   <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/controls/OrbitControls.js"></script>
-
   <script>
-    // Renderer
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.outputColorSpace = THREE.SRGBColorSpace;
-    renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.0;
-    document.body.appendChild(renderer.domElement);
+/* ---- Dye Mixing Lab - Advanced Diffusion Simulation ---- */
+/* ---- Copyright 2025 LIGHTLABS-CO ---- */
+/* ---- All code, shaders, and art generated in-file ---- */
 
-    // Scene & camera
-    const scene = new THREE.Scene();
-    // Self-contained background gradient using a large vertical plane
-    const bgGeo = new THREE.PlaneGeometry(100, 100);
-    const bgMat = new THREE.MeshBasicMaterial({ 
-      color: 0x2a3550,
-      side: THREE.BackSide
-    });
-    const bgMesh = new THREE.Mesh(bgGeo, bgMat);
-    bgMesh.position.set(0, 50, 0);
-    scene.add(bgMesh);
-
-    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 500);
-    camera.position.set(5, 3, 8);
-
-    // Controls
-    const controls = new THREE.OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
-    controls.target.set(0, 1, 0);
-
-    // Lights (no external HDR)
-    const hemi = new THREE.HemisphereLight(0xcdefff, 0x444466, 0.5);
-    hemi.position.set(0, 30, 0);
-    scene.add(hemi);
-
-    const sun = new THREE.DirectionalLight(0xffffff, 1.4);
-    sun.position.set(10, 15, 5);
-    sun.castShadow = true;
-    sun.shadow.mapSize.set(1024, 1024);
-    sun.shadow.camera.near = 1;
-    sun.shadow.camera.far = 50;
-    sun.shadow.camera.left = -20;
-    sun.shadow.camera.right = 20;
-    sun.shadow.camera.top = 20;
-    sun.shadow.camera.bottom = -20;
-    scene.add(sun);
-
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-
-    // Materials
-    const asphaltMat = new THREE.MeshStandardMaterial({ color: 0x2a2a2a, roughness: 0.95, metalness: 0.0 });
-    const sidewalkMat = new THREE.MeshStandardMaterial({ color: 0x9da3a6, roughness: 0.85, metalness: 0.0 });
-    const buildingMat = new THREE.MeshStandardMaterial({ color: 0xdddddd, roughness: 0.75, metalness: 0.0 });
-    const glassMat = new THREE.MeshPhysicalMaterial({
-      color: 0x88a8c8, metalness: 0.0, roughness: 0.05, transmission: 0.8, thickness: 0.2
-    });
-    const poleMat = new THREE.MeshStandardMaterial({ color: 0x444a4f, roughness: 0.6, metalness: 0.8 });
-
-    // Street: road + sidewalks
-    const road = new THREE.Mesh(new THREE.PlaneGeometry(20, 60), asphaltMat);
-    road.rotation.x = -Math.PI / 2;
-    road.receiveShadow = true;
-    scene.add(road);
-
-    // Lane markings
-    const laneGroup = new THREE.Group();
-    for (let i = -25; i <= 25; i += 5) {
-      const mark = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.01, 2), new THREE.MeshStandardMaterial({ color: 0xffffee }));
-      mark.position.set(0, 0.005, i);
-      mark.receiveShadow = true;
-      laneGroup.add(mark);
-    }
-    scene.add(laneGroup);
-
-    // Sidewalks
-    const sidewalkLeft = new THREE.Mesh(new THREE.BoxGeometry(3, 0.2, 60), sidewalkMat);
-    sidewalkLeft.position.set(-6.5, 0.1, 0);
-    sidewalkLeft.receiveShadow = true;
-    scene.add(sidewalkLeft);
-
-    const sidewalkRight = sidewalkLeft.clone();
-    sidewalkRight.position.x = 6.5;
-    scene.add(sidewalkRight);
-
-    // Buildings (simple blocks with some glass)
-    function addBuilding(x, z, w = 4, d = 6, h = 8, color = 0xdddddd) {
-      const bMat = buildingMat.clone();
-      bMat.color.setHex(color);
-      const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), bMat);
-      b.position.set(x, h / 2, z);
-      b.castShadow = true; b.receiveShadow = true;
-      scene.add(b);
-
-      // Glass facade strip
-      const glass = new THREE.Mesh(new THREE.BoxGeometry(w * 0.9, h * 0.3, 0.05), glassMat);
-      glass.position.set(x, h * 0.6, z + d/2 + 0.03);
-      glass.castShadow = false; glass.receiveShadow = true;
-      scene.add(glass);
-    }
-
-    for (let i = -20; i <= 20; i += 10) {
-      addBuilding(-10, i, 5, 7, 9, 0xcfcfcf);
-      addBuilding(10, i + 5, 6, 6, 11, 0xe6e6e6);
-      addBuilding(-13, i + 2, 4, 5, 7, 0xd9d9d9);
-      addBuilding(13, i - 2, 4, 5, 8, 0xeeeeee);
-    }
-
-    // Lampposts
-    function addLamp(x, z) {
-      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 4, 16), poleMat);
-      pole.position.set(x, 2, z);
-      pole.castShadow = true;
-
-      const head = new THREE.Mesh(new THREE.SphereGeometry(0.18, 16, 16), new THREE.MeshStandardMaterial({ color: 0xfff3c0, emissive: 0xffd27a, emissiveIntensity: 1.5 }));
-      head.position.set(x, 4.1, z);
-      head.castShadow = false;
-
-      const spot = new THREE.SpotLight(0xffe9b0, 0.6, 12, Math.PI/5, 0.25, 1.2);
-      spot.position.set(x, 4.2, z);
-      spot.target.position.set(x, 0, z + 1);
-      spot.castShadow = true;
-      scene.add(spot);
-      scene.add(spot.target);
-
-      scene.add(pole);
-      scene.add(head);
-    }
-
-    for (let i = -20; i <= 20; i += 10) {
-      addLamp(-4.5, i);
-      addLamp(4.5, i + 5);
-    }
-
-    // Cars (simple stylized blocks)
-    function addCar(x, z, color = 0x2f60ff) {
-      const body = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.6, 3.2), new THREE.MeshStandardMaterial({ color, roughness: 0.5, metalness: 0.3 }));
-      body.position.set(x, 0.35, z);
-      body.castShadow = true; body.receiveShadow = true;
-
-      const roof = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.4, 1.6), new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.4, metalness: 0.1 }));
-      roof.position.set(x, 0.75, z - 0.4);
-      roof.castShadow = true;
-
-      const glass = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.3, 1.2), glassMat);
-      glass.position.set(x, 0.75, z - 0.4);
-
-      scene.add(body);
-      scene.add(roof);
-      scene.add(glass);
-    }
-
-    addCar(-1.5, -5, 0xff3333);
-    addCar(2.0, 6, 0x33cc88);
-
-    // Metallic sphere with dynamic reflections
-    const sphereMat = new THREE.MeshPhysicalMaterial({
-      color: 0xffffff,
-      metalness: 1.0,
-      roughness: 0.1,
-      reflectivity: 1.0,
-      clearcoat: 0.3,
-      clearcoatRoughness: 0.05
-    });
-    const sphere = new THREE.Mesh(new THREE.SphereGeometry(1, 96, 96), sphereMat);
-    sphere.position.set(0, 1.6, 0);
-    sphere.castShadow = true; sphere.receiveShadow = true;
-    scene.add(sphere);
-
-    // Dynamic cube camera for local reflections (ray-tracing-like)
-    const cubeRenderTarget = new THREE.WebGLCubeRenderTarget(512, { type: THREE.HalfFloatType, generateMipmaps: true, minFilter: THREE.LinearMipmapLinearFilter });
-    const cubeCamera = new THREE.CubeCamera(0.1, 200, cubeRenderTarget);
-
-    // Place cube camera at sphere center
-    cubeCamera.position.copy(sphere.position);
-    scene.add(cubeCamera);
-
-    // UI bindings
-    const ui = {
-      metalness: document.getElementById('metalness'),
-      roughness: document.getElementById('roughness'),
-      reflectivity: document.getElementById('reflectivity'),
-      clearcoat: document.getElementById('clearcoat'),
-      clearcoatRoughness: document.getElementById('clearcoatRoughness'),
-      height: document.getElementById('height'),
-      envIntensity: document.getElementById('envIntensity'),
-      toggleTone: document.getElementById('toggleTone'),
-      resetCam: document.getElementById('resetCam'),
+/* --- Constants and Utility Functions --- */
+const DYE_COLORS = [
+  {name:'Azure',    hex:'#3da9fc'},
+  {name:'Pink',     hex:'#ff6fcb'},
+  {name:'Lime',     hex:'#48f48c'},
+  {name:'Yellow',   hex:'#ffe75c'},
+  {name:'Orange',   hex:'#ffbe3c'},
+  {name:'Purple',   hex:'#b158ff'},
+  {name:'Red',      hex:'#ff3b3b'},
+  {name:'Turquoise',hex:'#1fffc8'},
+  {name:'Violet',   hex:'#a6c3ff'},
+  {name:'Mint',     hex:'#b9ffd6'},
+  {name:'Magenta',  hex:'#ff47d2'},
+  {name:'Teal',     hex:'#3dffa9'},
+  {name:'White',    hex:'#f8faff'},
+  {name:'Black',    hex:'#22282a'}
+];
+function hexToRGB(hex) {
+  hex = hex.replace('#','');
+  if(hex.length===3) hex=hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2];
+  let num = parseInt(hex,16);
+  return [(num>>16)&255,(num>>8)&255,num&255];
+}
+function rgbToHex(r,g,b) {
+  return "#"+((1<<24)|(r<<16)|(g<<8)|b).toString(16).substr(1);
+}
+function clamp(v,a,b) { return Math.max(a,Math.min(b,v)); }
+function lerp(a,b,t) { return a+(b-a)*t; }
+function dist(x1,y1,x2,y2) { return Math.sqrt((x2-x1)**2 + (y2-y1)**2); }
+function hslToRgb(h, s, l) {
+  h = h/360; s = s/100; l = l/100;
+  let r,g,b;
+  if(s===0) r=g=b=l;
+  else {
+    const hue2rgb=(p,q,t)=>{
+      if(t<0)t+=1;if(t>1)t-=1;
+      if(t<1/6)return p+(q-p)*6*t;
+      if(t<1/2)return q;
+      if(t<2/3)return p+(q-p)*(2/3-t)*6;
+      return p;
     };
-
-    function updateMaterial() {
-      sphereMat.metalness = parseFloat(ui.metalness.value);
-      sphereMat.roughness = parseFloat(ui.roughness.value);
-      sphereMat.reflectivity = parseFloat(ui.reflectivity.value);
-      sphereMat.clearcoat = parseFloat(ui.clearcoat.value);
-      sphereMat.clearcoatRoughness = parseFloat(ui.clearcoatRoughness.value);
-      sphere.position.y = parseFloat(ui.height.value);
+    let q = l<0.5?l*(1+s):l+s-l*s;
+    let p = 2*l-q;
+    r = hue2rgb(p,q,h+1/3);g=hue2rgb(p,q,h);b=hue2rgb(p,q,h-1/3);
+  }
+  return [Math.round(r*255),Math.round(g*255),Math.round(b*255)];
+}
+function rgbToHsl(r,g,b) {
+  r/=255;g/=255;b/=255;
+  let max=Math.max(r,g,b),min=Math.min(r,g,b);
+  let h,s,l=(max+min)/2;
+  if(max===min)h=s=0;
+  else {
+    let d=max-min;
+    s=l>0.5?d/(2-max-min):d/(max+min);
+    switch(max){
+      case r:h=(g-b)/d+(g<b?6:0);break;
+      case g:h=(b-r)/d+2;break;
+      case b:h=(r-g)/d+4;break;
     }
+    h*=60;
+  }
+  return [h,s*100,l*100];
+}
 
-    ui.metalness.oninput = updateMaterial;
-    ui.roughness.oninput = updateMaterial;
-    ui.reflectivity.oninput = updateMaterial;
-    ui.clearcoat.oninput = updateMaterial;
-    ui.clearcoatRoughness.oninput = updateMaterial;
-    ui.height.oninput = updateMaterial;
+/* --- Canvas and Renderer Setup --- */
+const WIDTH = Math.min(window.innerWidth, 1024);
+const HEIGHT = Math.min(window.innerHeight, 630);
 
-    ui.envIntensity.oninput = () => {
-      const intensity = parseFloat(ui.envIntensity.value);
-      scene.traverse(obj => {
-        if (obj.isMesh && obj.material && 'envMapIntensity' in obj.material) {
-          obj.material.envMapIntensity = intensity;
-        }
-      });
+// Use THREE.js for UI (for future extensibility), but main dye simulation is in WebGL2 shaders
+let renderer = new THREE.WebGLRenderer({canvas:null,antialias:true,preserveDrawingBuffer:true});
+renderer.setSize(WIDTH,HEIGHT);
+renderer.setClearColor(0x22282a, 1);
+renderer.domElement.style.position = "absolute";
+renderer.domElement.style.left = "0";
+renderer.domElement.style.top = "0";
+renderer.domElement.style.zIndex = "1";
+document.body.appendChild(renderer.domElement);
+
+let gl = renderer.getContext();
+
+/* --- Dye Simulation State --- */
+const SIM_SIZE = 512; // simulation resolution
+let dyeState = null; // simulation framebuffer
+let dyeStateSwap = null; // swap buffer
+let dyeTexture = null; // display texture
+
+let mouseDown = false, touchActive = false;
+let mouseX = 0, mouseY = 0;
+let lastX = 0, lastY = 0;
+let lastTime = Date.now();
+let stirDX = 0, stirDY = 0;
+let stirAmount = 0;
+let dragPath = [];
+
+let dyeDrops = [];
+let dyeMixColor = [0,0,0];
+let dyeMixCount = 0;
+
+/* --- User Controls State --- */
+let uiState = {
+  dyeColor: hexToRGB(DYE_COLORS[0].hex),
+  dyeAlpha: 0.7,
+  dyeSize: 28,
+  dyeType: 'circular',
+  diffuseSpeed: 1.3,
+  turbulence: 0.02,
+  viscosity: 1.1,
+  smear: 0.14,
+  bgHue: 210,
+  bgBright: 0.16,
+};
+
+/* --- UI Setup --- */
+function setupUI() {
+  // Dye color swatches
+  const colorRow = document.getElementById('colorRow');
+  DYE_COLORS.forEach((col,i)=>{
+    let btn = document.createElement('div');
+    btn.className = "color-btn"+(i===0?" selected":"");
+    btn.style.background = col.hex;
+    btn.title = col.name;
+    btn.onclick = ()=>{
+      document.querySelectorAll('.color-btn').forEach(b=>b.classList.remove('selected'));
+      btn.classList.add('selected');
+      uiState.dyeColor = hexToRGB(col.hex);
+      document.getElementById('info').innerText = `Selected dye: ${col.name}`;
     };
+    colorRow.appendChild(btn);
+  });
 
-    ui.toggleTone.onclick = () => {
-      renderer.toneMapping = (renderer.toneMapping === THREE.ACESFilmicToneMapping)
-        ? THREE.NoToneMapping
-        : THREE.ACESFilmicToneMapping;
-    };
+  // Drop size
+  let dropSize = document.getElementById('dropSize');
+  let dropSizeVal = document.getElementById('dropSizeVal');
+  dropSize.oninput = ()=>{uiState.dyeSize = parseInt(dropSize.value); dropSizeVal.innerText = dropSize.value;}
+  dropSizeVal.innerText = dropSize.value;
 
-    ui.resetCam.onclick = () => {
-      controls.target.set(0, 1, 0);
-      camera.position.set(5, 3, 8);
-      controls.update();
-    };
+  // Drop alpha
+  let dropAlpha = document.getElementById('dropAlpha');
+  let dropAlphaVal = document.getElementById('dropAlphaVal');
+  dropAlpha.oninput = ()=>{uiState.dyeAlpha = parseFloat(dropAlpha.value); dropAlphaVal.innerText = dropAlpha.value;}
+  dropAlphaVal.innerText = dropAlpha.value;
 
-    // Initial env map intensity
-    ui.envIntensity.oninput();
+  // Drop type
+  let dropType = document.getElementById('dropType');
+  dropType.onchange = ()=>{uiState.dyeType = dropType.value;}
 
-    // Animation
-    let t = 0;
-    function animate() {
-      requestAnimationFrame(animate);
+  // Add drop button
+  document.getElementById('addDropBtn').onclick = ()=>{
+    addDyeDrop(WIDTH/2,HEIGHT/2,uiState.dyeColor,uiState.dyeAlpha,uiState.dyeSize,uiState.dyeType);
+  };
 
-      // Subtle hover motion
-      t += 0.01;
-      sphere.position.y = parseFloat(ui.height.value) + Math.sin(t) * 0.05;
-      cubeCamera.position.copy(sphere.position);
+  // Reset button
+  document.getElementById('resetBtn').onclick = ()=>{resetDye();};
 
-      // Update cube env map for the sphere: hide sphere, render cube, show sphere
-      sphere.visible = false;
-      cubeCamera.update(renderer, scene);
-      sphere.visible = true;
+  // Diffuse speed
+  let diffuseSpeed = document.getElementById('diffuseSpeed');
+  let diffuseSpeedVal = document.getElementById('diffuseSpeedVal');
+  diffuseSpeed.oninput = ()=>{uiState.diffuseSpeed = parseFloat(diffuseSpeed.value); diffuseSpeedVal.innerText = diffuseSpeed.value;}
+  diffuseSpeedVal.innerText = diffuseSpeed.value;
 
-      // Assign dynamic envMap to sphere material
-      sphereMat.envMap = cubeRenderTarget.texture;
-      sphereMat.needsUpdate = true;
+  // Turbulence
+  let turbulence = document.getElementById('turbulence');
+  let turbulenceVal = document.getElementById('turbulenceVal');
+  turbulence.oninput = ()=>{uiState.turbulence = parseFloat(turbulence.value); turbulenceVal.innerText = turbulence.value;}
+  turbulenceVal.innerText = turbulence.value;
 
-      controls.update();
-      renderer.render(scene, camera);
+  // Viscosity
+  let viscosity = document.getElementById('viscosity');
+  let viscosityVal = document.getElementById('viscosityVal');
+  viscosity.oninput = ()=>{uiState.viscosity = parseFloat(viscosity.value); viscosityVal.innerText = viscosity.value;}
+  viscosityVal.innerText = viscosity.value;
+
+  // Smear
+  let smear = document.getElementById('smear');
+  let smearVal = document.getElementById('smearVal');
+  smear.oninput = ()=>{uiState.smear = parseFloat(smear.value); smearVal.innerText = smear.value;}
+  smearVal.innerText = smear.value;
+
+  // BG hue
+  let bgHue = document.getElementById('bgHue');
+  let bgHueVal = document.getElementById('bgHueVal');
+  bgHue.oninput = ()=>{uiState.bgHue = parseInt(bgHue.value); bgHueVal.innerText = bgHue.value;}
+  bgHueVal.innerText = bgHue.value;
+
+  // BG brightness
+  let bgBright = document.getElementById('bgBright');
+  let bgBrightVal = document.getElementById('bgBrightVal');
+  bgBright.oninput = ()=>{uiState.bgBright = parseFloat(bgBright.value); bgBrightVal.innerText = bgBright.value;}
+  bgBrightVal.innerText = bgBright.value;
+}
+setupUI();
+
+/* --- Dye Dropper Logic --- */
+function addDyeDrop(x, y, color, alpha, size, type) {
+  dyeDrops.push({
+    x: x/SIM_SIZE,
+    y: y/SIM_SIZE,
+    color: color,
+    alpha: alpha,
+    size: size/SIM_SIZE,
+    type: type,
+    time: Date.now()
+  });
+  dyeMixColor[0] += color[0]; dyeMixColor[1] += color[1]; dyeMixColor[2] += color[2];
+  dyeMixCount++;
+  document.getElementById('info').innerText = `Dye drop added: ${color.map(c=>Math.round(c)).join(',')} (type: ${type})`;
+}
+
+/* --- Dye Simulation Shader (GLSL) --- */
+/* --- This fragment shader handles diffusion, mixing, stirring, and turbulence --- */
+const dyeFragmentShader = `#version 300 es
+precision highp float;
+uniform sampler2D dye;
+uniform float diffuseSpeed;
+uniform float turbulence;
+uniform float viscosity;
+uniform float smear;
+uniform vec2 resolution;
+uniform vec2 stirVec;
+out vec4 outColor;
+
+float rand(vec2 co){
+  return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
+}
+void main() {
+  vec2 uv = gl_FragCoord.xy / resolution;
+  vec4 color = texture(dye, uv);
+
+  // --- Diffusion: sample neighbors and blend ---
+  vec4 diffusion = vec4(0.0);
+  float wsum = 0.0;
+  float r = 1.0 / resolution.x;
+  for(int i=-2;i<=2;i++) {
+    for(int j=-2;j<=2;j++) {
+      float w = 1.0 - 0.18*float(abs(i)+abs(j));
+      diffusion += texture(dye, uv + vec2(i,j)*r) * w;
+      wsum += w;
     }
-    animate();
+  }
+  diffusion /= wsum;
+  color = mix(color, diffusion, diffuseSpeed*0.018);
 
-    // Resize
-    window.addEventListener('resize', () => {
-      const w = window.innerWidth, h = window.innerHeight;
-      camera.aspect = w / h;
-      camera.updateProjectionMatrix();
-      renderer.setSize(w, h);
+  // --- Turbulence: add random jitter ---
+  float turb = turbulence * (rand(uv+gl_FragCoord.xy*0.02) - 0.5);
+  uv += turb;
+  color.rgb = mix(color.rgb, texture(dye, clamp(uv,0.,1.)).rgb, turbulence*0.6);
+
+  // --- Stirring: apply motion vector ---
+  color.rgb = mix(color.rgb, texture(dye, clamp(uv+stirVec*viscosity*0.35,0.,1.)).rgb, clamp(length(stirVec)*0.11,0.,0.6));
+
+  // --- Smear: gentle color blend for realism ---
+  color.rgb = mix(color.rgb, diffusion.rgb, smear*0.36);
+
+  // --- Fade out alpha for realism ---
+  color.a *= 0.999;
+
+  outColor = color;
+}
+`;
+
+/* --- Dye Drop Shader (GLSL) --- */
+/* --- This fragment shader applies dye drops to the simulation texture --- */
+const dyeDropShader = `#version 300 es
+precision highp float;
+uniform vec2 dropPos;
+uniform vec3 dyeColor;
+uniform float dropAlpha;
+uniform float dropSize;
+uniform int dropType;
+uniform vec2 resolution;
+out vec4 outColor;
+void main() {
+  vec2 uv = gl_FragCoord.xy / resolution;
+  float d = distance(uv, dropPos);
+  float alpha = 0.0;
+  if (dropType==0) { // circular
+    alpha = smoothstep(dropSize, 0.0, d);
+  } else if (dropType==1) { // splash
+    alpha = smoothstep(dropSize*1.2, dropSize*0.2, d) * (0.6+0.4*fract(sin(dot(uv,vec2(41.7,97.1)))*12345.6));
+  } else if (dropType==2) { // spray
+    alpha = smoothstep(dropSize*1.6, dropSize*0.05, d) * (0.3+0.7*fract(sin(dot(uv,vec2(19.1,71.3)))*65432.1));
+  } else if (dropType==3) { // ring
+    float ring = abs(d-dropSize*0.65);
+    alpha = smoothstep(dropSize*0.38, dropSize*0.08, ring);
+  }
+  alpha *= dropAlpha;
+  outColor = vec4(dyeColor, alpha);
+}
+`;
+
+/* --- Initialize Simulation Framebuffers --- */
+function createFramebuffer(size) {
+  let rt = new THREE.WebGLRenderTarget(size,size,{
+    format: THREE.RGBAFormat,
+    type: THREE.FloatType,
+    minFilter: THREE.LinearFilter,
+    magFilter: THREE.LinearFilter,
+    depthBuffer: false,
+    stencilBuffer: false
+  });
+  return rt;
+}
+dyeState = createFramebuffer(SIM_SIZE);
+dyeStateSwap = createFramebuffer(SIM_SIZE);
+
+/* --- Dye Simulation Mesh --- */
+let dyeMesh = new THREE.Mesh(
+  new THREE.PlaneGeometry(2,2),
+  new THREE.ShaderMaterial({
+    uniforms: {
+      dye: {value: dyeState.texture},
+      diffuseSpeed: {value: uiState.diffuseSpeed},
+      turbulence: {value: uiState.turbulence},
+      viscosity: {value: uiState.viscosity},
+      smear: {value: uiState.smear},
+      resolution: {value: new THREE.Vector2(SIM_SIZE,SIM_SIZE)},
+      stirVec: {value: new THREE.Vector2(0,0)}
+    },
+    fragmentShader: dyeFragmentShader,
+    vertexShader: `
+      varying vec2 vUv;
+      void main() { vUv = uv; gl_Position = vec4(position,1.0);}
+    `
+  })
+);
+
+/* --- Dye Dropper Mesh --- */
+let dyeDropMesh = new THREE.Mesh(
+  new THREE.PlaneGeometry(2,2),
+  new THREE.ShaderMaterial({
+    uniforms: {
+      dropPos: {value: new THREE.Vector2(0.5,0.5)},
+      dyeColor: {value: new THREE.Color(1,1,1)},
+      dropAlpha: {value: 0.7},
+      dropSize: {value: 0.06},
+      dropType: {value: 0},
+      resolution: {value: new THREE.Vector2(SIM_SIZE,SIM_SIZE)}
+    },
+    fragmentShader: dyeDropShader,
+    vertexShader: `
+      varying vec2 vUv;
+      void main() { vUv = uv; gl_Position = vec4(position,1.0);}
+    `
+  })
+);
+
+let dyeScene = new THREE.Scene();
+dyeScene.add(dyeMesh);
+
+let dyeDropScene = new THREE.Scene();
+dyeDropScene.add(dyeDropMesh);
+
+/* --- Simulation Update Loop --- */
+function updateDye() {
+  // 1. Apply dye drops (if any)
+  if (dyeDrops.length>0) {
+    dyeDrops.forEach(drop=>{
+      dyeDropMesh.material.uniforms.dropPos.value.set(drop.x,drop.y);
+      dyeDropMesh.material.uniforms.dyeColor.value.setRGB(drop.color[0]/255,drop.color[1]/255,drop.color[2]/255);
+      dyeDropMesh.material.uniforms.dropAlpha.value = drop.alpha;
+      dyeDropMesh.material.uniforms.dropSize.value = drop.size;
+      dyeDropMesh.material.uniforms.dropType.value = (
+        drop.type==='circular'?0:
+        drop.type==='splash'?1:
+        drop.type==='spray'?2:
+        drop.type==='ring'?3:0
+      );
+      renderer.setRenderTarget(dyeState);
+      renderer.render(dyeDropScene, new THREE.Camera());
     });
+    dyeDrops = [];
+  }
+
+  // 2. Update diffusion shader uniforms
+  dyeMesh.material.uniforms.dye.value = dyeState.texture;
+  dyeMesh.material.uniforms.diffuseSpeed.value = uiState.diffuseSpeed;
+  dyeMesh.material.uniforms.turbulence.value = uiState.turbulence;
+  dyeMesh.material.uniforms.viscosity.value = uiState.viscosity;
+  dyeMesh.material.uniforms.smear.value = uiState.smear;
+  dyeMesh.material.uniforms.stirVec.value.set(stirDX, stirDY);
+
+  // 3. Swap buffers: Run dye simulation shader
+  renderer.setRenderTarget(dyeStateSwap);
+  renderer.render(dyeScene, new THREE.Camera());
+
+  // 4. Swap textures
+  let tmp = dyeState;
+  dyeState = dyeStateSwap;
+  dyeStateSwap = tmp;
+
+  renderer.setRenderTarget(null);
+}
+
+/* --- Draw Dye to Main Canvas --- */
+function drawDyeToCanvas() {
+  // Render dye texture as a full-screen quad with background
+  gl.viewport(0, 0, WIDTH, HEIGHT);
+  // Draw background
+  let bgRGB = hslToRgb(uiState.bgHue, 35, uiState.bgBright*100);
+  renderer.setClearColor(rgbToHex(...bgRGB), 1);
+  renderer.clear();
+
+  // Draw dye simulation
+  renderer.copyTextureToTexture(
+    new THREE.Vector2(0,0),
+    dyeState.texture,
+    dyeTexture
+  );
+  renderer.render(dyeScene, new THREE.Camera());
+}
+
+/* --- Animation Loop --- */
+function animate() {
+  updateDye();
+  drawDyeToCanvas();
+  requestAnimationFrame(animate);
+}
+animate();
+
+/* --- Mouse/Touch Interactions --- */
+function getCanvasPos(e) {
+  let rect = renderer.domElement.getBoundingClientRect();
+  if(e.touches) {
+    return [
+      (e.touches[0].clientX-rect.left)/rect.width*SIM_SIZE,
+      (e.touches[0].clientY-rect.top)/rect.height*SIM_SIZE
+    ];
+  }
+  return [
+    (e.clientX-rect.left)/rect.width*SIM_SIZE,
+    (e.clientY-rect.top)/rect.height*SIM_SIZE
+  ];
+}
+
+renderer.domElement.addEventListener('mousedown', e=>{
+  mouseDown = true;
+  let [x,y] = getCanvasPos(e);
+  lastX = x; lastY = y;
+  dragPath = [[x,y]];
+  stirDX = 0; stirDY = 0;
+  touchActive = false;
+  document.getElementById('touchGuide').classList.remove('show');
+});
+renderer.domElement.addEventListener('mousemove', e=>{
+  if(mouseDown) {
+    let [x,y] = getCanvasPos(e);
+    stirDX = (x-lastX)/SIM_SIZE; stirDY = (y-lastY)/SIM_SIZE;
+    stirAmount = Math.sqrt(stirDX**2+stirDY**2);
+    dragPath.push([x,y]);
+    lastX = x; lastY = y;
+    // Mix dye along drag path
+    addDyeDrop(x,y,uiState.dyeColor,uiState.dyeAlpha*clamp(stirAmount*12,0.15,1),uiState.dyeSize,uiState.dyeType);
+  }
+});
+renderer.domElement.addEventListener('mouseup', e=>{
+  mouseDown = false;
+  stirDX = 0; stirDY = 0;
+  dragPath = [];
+});
+renderer.domElement.addEventListener('mouseleave', e=>{
+  mouseDown = false;
+  stirDX = 0; stirDY = 0;
+  dragPath = [];
+});
+
+// Touch
+renderer.domElement.addEventListener('touchstart', e=>{
+  let [x,y] = getCanvasPos(e);
+  mouseDown = false;
+  touchActive = true;
+  dragPath = [[x,y]];
+  lastX = x; lastY = y;
+  stirDX = 0; stirDY = 0;
+  document.getElementById('touchGuide').classList.add('show');
+});
+renderer.domElement.addEventListener('touchmove', e=>{
+  if(touchActive) {
+    let [x,y] = getCanvasPos(e);
+    stirDX = (x-lastX)/SIM_SIZE; stirDY = (y-lastY)/SIM_SIZE;
+    stirAmount = Math.sqrt(stirDX**2+stirDY**2);
+    dragPath.push([x,y]);
+    lastX = x; lastY = y;
+    addDyeDrop(x,y,uiState.dyeColor,uiState.dyeAlpha*clamp(stirAmount*13,0.16,1),uiState.dyeSize,uiState.dyeType);
+  }
+});
+renderer.domElement.addEventListener('touchend', e=>{
+  touchActive = false;
+  stirDX = 0; stirDY = 0;
+  dragPath = [];
+  setTimeout(()=>{document.getElementById('touchGuide').classList.remove('show');},800);
+});
+
+/* --- Reset Dye Simulation --- */
+function resetDye() {
+  // Fill dye texture with transparent
+  renderer.setRenderTarget(dyeState);
+  renderer.clearColor();
+  renderer.clear();
+  renderer.setRenderTarget(dyeStateSwap);
+  renderer.clearColor();
+  renderer.clear();
+  dyeDrops = [];
+  dyeMixColor = [0,0,0];
+  dyeMixCount = 0;
+  document.getElementById('info').innerText = "Reset dye simulation.";
+}
+
+/* --- Resize Handling --- */
+window.addEventListener('resize', ()=>{
+  let W = Math.min(window.innerWidth, 1024);
+  let H = Math.min(window.innerHeight, 630);
+  renderer.setSize(W,H);
+});
+
+/* --- Info Panel Updates --- */
+setInterval(()=>{
+  let avgMix = dyeMixCount?dyeMixColor.map(c=>Math.round(c/dyeMixCount)):[0,0,0];
+  let mixHex = rgbToHex(avgMix[0],avgMix[1],avgMix[2]);
+  document.getElementById('info').innerHTML =
+    `Total dye drops: <b>${dyeMixCount}</b><br>
+    Current dye: <span style="color:${mixHex};background:#fff2;padding:2px 7px;border-radius:8px;">${mixHex}</span>`;
+}, 650);
+
+/* --- End of Dye Mixing Lab --- */
   </script>
 </body>
 </html>

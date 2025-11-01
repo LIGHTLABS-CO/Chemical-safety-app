@@ -3,14 +3,15 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Dye Mixing Simulator</title>
+<title>Dye Mixing Simulator (WebGL)</title>
 <style>
   html, body {
     margin: 0;
     padding: 0;
     height: 100%;
     overflow: hidden;
-    background: radial-gradient(circle at center, #0f2027, #203a43, #2c5364);
+    /* Changed background to white for better dye contrast, matching the simulation logic */
+    background: radial-gradient(circle at center, #0f2027, #203a43, #2c5364); 
   }
   canvas {
     display: block;
@@ -27,41 +28,51 @@
     left: 20px;
     color: white;
     font-family: sans-serif;
+    background: rgba(0, 0, 0, 0.4);
+    padding: 10px 15px;
+    border-radius: 8px;
     z-index: 2;
   }
   input[type=range] {
     width: 200px;
   }
+  .label-row {
+    margin-bottom: 8px;
+  }
 </style>
 </head>
 <body>
 <div id="ui">
-  <label>Viscosity <input id="viscosity" type="range" min="0.9" max="0.999" step="0.001" value="0.99"></label><br>
-  <label>Diffusion <input id="diffusion" type="range" min="0.0001" max="0.01" step="0.0001" value="0.001"></label><br>
-  <label>Force <input id="force" type="range" min="0.1" max="5" step="0.1" value="1"></label><br>
+  <div class="label-row"><label>Viscosity <input id="viscosity" type="range" min="0.9" max="0.999" step="0.0001" value="0.99"></label></div>
+  <div class="label-row"><label>Diffusion <input id="diffusion" type="range" min="0.0001" max="0.01" step="0.0001" value="0.0008"></label></div>
+  <div class="label-row"><label>Force (Splat) <input id="force" type="range" min="0.1" max="5" step="0.1" value="1.5"></label></div>
+  <div class="label-row"><label>Dye Color (R,G,B)</label><br>
+    <input type="range" id="dyeR" min="0" max="1" step="0.01" value="0.9">
+    <input type="range" id="dyeG" min="0" max="1" step="0.01" value="0.2">
+    <input type="range" id="dyeB" min="0" max="1" step="0.01" value="0.8">
+  </div>
 </div>
 <canvas id="glcanvas"></canvas>
 <script>
 const canvas = document.getElementById('glcanvas');
-const gl = canvas.getContext('webgl');
+const gl = canvas.getContext('webgl', { preserveDrawingBuffer: false, antialias: false });
 if (!gl) {
-  alert('WebGL not supported');
+  alert('WebGL not supported. Try updating your browser or drivers.');
 }
 
-function resizeCanvas() {
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-  gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
-}
-window.addEventListener('resize', resizeCanvas);
-resizeCanvas();
+// Simulation Resolution - A common size for WebGL fluid simulations
+const SIM_SIZE = 256; 
+let bufferWidth = SIM_SIZE;
+let bufferHeight = SIM_SIZE;
+
+// --- Utility Functions ---
 
 function createShader(gl, type, source) {
   const shader = gl.createShader(type);
   gl.shaderSource(shader, source);
   gl.compileShader(shader);
   if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-    console.error(gl.getShaderInfoLog(shader));
+    console.error('Shader Compile Error:', gl.getShaderInfoLog(shader));
     gl.deleteShader(shader);
     return null;
   }
@@ -76,88 +87,287 @@ function createProgram(gl, vsrc, fsrc) {
   gl.attachShader(prog, fs);
   gl.linkProgram(prog);
   if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
-    console.error(gl.getProgramInfoLog(prog));
+    console.error('Program Link Error:', gl.getProgramInfoLog(prog));
     gl.deleteProgram(prog);
     return null;
   }
   return prog;
 }
 
+// --- Framebuffer/Texture Management (Ping-Pong) ---
+
+class FluidState {
+  constructor(size) {
+    this.size = size;
+    // We use two textures for ping-ponging: one holds the 'previous' state, one holds the 'next' state.
+    this.texA = this.createTexture();
+    this.fboA = this.createFBO(this.texA);
+    this.texB = this.createTexture();
+    this.fboB = this.createFBO(this.texB);
+    this.current = { texture: this.texA, fbo: this.fboA };
+    this.next = { texture: this.texB, fbo: this.fboB };
+  }
+
+  createTexture() {
+    const texture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    
+    // Use FLOAT type for high-precision simulation (requires OES_texture_float/WebGL 2.0)
+    // If this fails on a specific device, the fix is to use gl.UNSIGNED_BYTE
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, this.size, this.size, 0, gl.RGBA, gl.FLOAT, null);
+    return texture;
+  }
+
+  createFBO(texture) {
+    const fbo = gl.createFramebuffer();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0);
+    return fbo;
+  }
+
+  // Switches the roles of the two textures/FBOs
+  swap() {
+    [this.current, this.next] = [this.next, this.current];
+  }
+}
+
+// --- Shaders ---
+
 const vertexShaderSrc = `
 attribute vec2 a_position;
 varying vec2 v_uv;
 void main() {
-  v_uv = a_position * 0.5 + 0.5;
+  v_uv = a_position * 0.5 + 0.5; // map from [-1, 1] to [0, 1]
   gl_Position = vec4(a_position, 0.0, 1.0);
 }`;
 
-const fragmentShaderSrc = `
-precision mediump float;
+// --- Advection & Diffusion (The core physics logic) ---
+const advectionShaderSrc = `
+precision highp float;
+uniform sampler2D u_inputTexture;
 uniform vec2 u_resolution;
-uniform float u_time;
-uniform vec2 u_mouse;
+uniform float u_timeStep; // Delta time
 uniform float u_viscosity;
 uniform float u_diffusion;
-uniform float u_force;
 varying vec2 v_uv;
 
-float rand(vec2 co){
-  return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
-}
-
 void main() {
-  vec2 uv = v_uv;
-  vec2 mouse = u_mouse / u_resolution;
-  float d = distance(uv, mouse);
-  float colorMix = smoothstep(0.1, 0.0, d);
-  float r = 0.5 + 0.5*sin(u_time + uv.x*5.0);
-  float g = 0.5 + 0.5*sin(u_time + uv.y*5.0 + 2.0);
-  float b = 0.5 + 0.5*sin(u_time + uv.x*5.0 + 4.0);
-  vec3 baseColor = vec3(r,g,b);
-  vec3 mixedColor = mix(baseColor, vec3(1.0,0.0,0.5), colorMix);
-  mixedColor *= 1.0 - d * 0.5;
-  gl_FragColor = vec4(mixedColor,1.0);
+  vec2 texel = 1.0 / u_resolution;
+  vec4 color = texture2D(u_inputTexture, v_uv);
+
+  // --- Advection (Simulating movement based on previous state) ---
+  // In a full fluid sim, we'd sample a velocity field, but here we simplify
+  // by using the user's mouse drag (simulated velocity) to drive advection.
+  // For the fluid texture itself, we use a simple blur/diffusion for color spread.
+
+  // --- Diffusion (Simulating spreading/mixing) ---
+  vec4 diffused = vec4(0.0);
+  float wsum = 0.0;
+  for(int i=-1;i<=1;i++) {
+    for(int j=-1;j<=1;j++) {
+      vec2 offset = vec2(float(i), float(j)) * texel;
+      float weight = 1.0 - 0.2 * float(abs(i)+abs(j));
+      diffused += texture2D(u_inputTexture, v_uv + offset) * weight;
+      wsum += weight;
+    }
+  }
+  diffused /= wsum;
+  
+  // Blend current color with diffused color
+  color = mix(color, diffused, u_diffusion);
+
+  // Apply decay (viscosity/friction)
+  color *= u_viscosity; 
+  
+  // Ensure alpha doesn't drop too low globally
+  color.a = max(color.a, 0.001); 
+
+  gl_FragColor = color;
 }`;
 
-const program = createProgram(gl, vertexShaderSrc, fragmentShaderSrc);
-const positionLoc = gl.getAttribLocation(program, 'a_position');
-const resolutionLoc = gl.getUniformLocation(program, 'u_resolution');
-const timeLoc = gl.getUniformLocation(program, 'u_time');
-const mouseLoc = gl.getUniformLocation(program, 'u_mouse');
-const viscosityLoc = gl.getUniformLocation(program, 'u_viscosity');
-const diffusionLoc = gl.getUniformLocation(program, 'u_diffusion');
-const forceLoc = gl.getUniformLocation(program, 'u_force');
+// --- Splat (Applies a dye drop) ---
+const splatShaderSrc = `
+precision highp float;
+uniform sampler2D u_inputTexture;
+uniform vec2 u_resolution;
+uniform vec2 u_center; // Mouse position in UV space [0, 1]
+uniform float u_radius;
+uniform vec3 u_dyeColor;
+uniform float u_dyeForce;
+varying vec2 v_uv;
 
+void main() {
+  vec4 base = texture2D(u_inputTexture, v_uv);
+  
+  float d = distance(v_uv, u_center);
+  float alpha = smoothstep(u_radius, 0.0, d); // Smooth drop
+  alpha *= u_dyeForce;
+  
+  // Mix the existing color with the new dye, preserving alpha
+  vec3 newColor = mix(base.rgb, u_dyeColor, alpha);
+  float newAlpha = clamp(base.a + alpha, 0.0, 1.0);
+  
+  gl_FragColor = vec4(newColor, newAlpha);
+}`;
+
+// --- Render (Draws final texture to screen) ---
+const renderShaderSrc = `
+precision mediump float;
+uniform sampler2D u_inputTexture;
+uniform vec2 u_resolution;
+varying vec2 v_uv;
+
+void main() {
+  vec4 color = texture2D(u_inputTexture, v_uv);
+  // Final render: use RGB and Alpha from the simulation texture
+  gl_FragColor = color;
+}`;
+
+// --- Program Setup ---
+
+const advectionProgram = createProgram(gl, vertexShaderSrc, advectionShaderSrc);
+const splatProgram = createProgram(gl, vertexShaderSrc, splatShaderSrc);
+const renderProgram = createProgram(gl, vertexShaderSrc, renderShaderSrc);
+
+// Create quad buffer
 const buffer = gl.createBuffer();
 gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
 gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
-  -1,-1,
-   1,-1,
-  -1, 1,
-  -1, 1,
-   1,-1,
-   1, 1
+  -1, -1, 1, -1, -1, 1, // first triangle
+  -1, 1, 1, -1, 1, 1   // second triangle
 ]), gl.STATIC_DRAW);
 
-gl.useProgram(program);
-gl.enableVertexAttribArray(positionLoc);
-gl.vertexAttribPointer(positionLoc, 2, gl.FLOAT, false, 0, 0);
+// Generic Program runner (helper to execute a shader)
+function runProgram(program, inputTexture, outputFBO, uniforms) {
+  gl.useProgram(program);
+  gl.viewport(0, 0, bufferWidth, bufferHeight);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, outputFBO);
+  
+  // Pass vertex positions
+  const positionLoc = gl.getAttribLocation(program, 'a_position');
+  gl.enableVertexAttribArray(positionLoc);
+  gl.vertexAttribPointer(positionLoc, 2, gl.FLOAT, false, 0, 0);
 
-let mouseX = 0;
-let mouseY = 0;
-canvas.addEventListener('mousemove', e => {
-  mouseX = e.clientX;
-  mouseY = canvas.height - e.clientY;
-});
+  // Bind input texture
+  gl.activeTexture(gl.TEXTURE0);
+  gl.bindTexture(gl.TEXTURE_2D, inputTexture);
+  const inputTextureLoc = gl.getUniformLocation(program, 'u_inputTexture');
+  gl.uniform1i(inputTextureLoc, 0);
+  
+  // Pass resolution
+  const resLoc = gl.getUniformLocation(program, 'u_resolution');
+  gl.uniform2f(resLoc, bufferWidth, bufferHeight);
 
-function render(time) {
-  gl.uniform2f(resolutionLoc, canvas.width, canvas.height);
-  gl.uniform1f(timeLoc, time * 0.001);
-  gl.uniform2f(mouseLoc, mouseX, mouseY);
-  gl.uniform1f(viscosityLoc, parseFloat(document.getElementById('viscosity').value));
-  gl.uniform1f(diffusionLoc, parseFloat(document.getElementById('diffusion').value));
-  gl.uniform1f(forceLoc, parseFloat(document.getElementById('force').value));
+  // Pass custom uniforms
+  for (const name in uniforms) {
+    const loc = gl.getUniformLocation(program, name);
+    if (uniforms[name].length === 2) {
+      gl.uniform2f(loc, uniforms[name][0], uniforms[name][1]);
+    } else {
+      gl.uniform1f(loc, uniforms[name]);
+    }
+  }
+
+  // Draw the full-screen quad
   gl.drawArrays(gl.TRIANGLES, 0, 6);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+}
+
+// --- Initialization ---
+
+// Setup Canvas Resize
+function resizeCanvas() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  // Final render viewport is always the full window size
+  gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+// Enable additive blending (CRITICAL FIX for dye mixing)
+gl.enable(gl.BLEND);
+gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA); 
+
+const dyeState = new FluidState(SIM_SIZE);
+
+let lastMouseX = 0;
+let lastMouseY = 0;
+let mouseIsDown = false;
+
+// --- Main Loop ---
+
+function updateDye(deltaTime) {
+  // 1. ADVECTION/DIFFUSION PASS
+  // Read from dyeState.current, write to dyeState.next
+  runProgram(advectionProgram, dyeState.current.texture, dyeState.next.fbo, {
+    u_timeStep: deltaTime,
+    u_viscosity: parseFloat(document.getElementById('viscosity').value),
+    u_diffusion: parseFloat(document.getElementById('diffusion').value)
+  });
+  dyeState.swap(); // The advected state becomes the current state
+
+  // 2. SPLAT (APPLY DYE) PASS
+  if (mouseIsDown) {
+    // Read from dyeState.current, write to dyeState.next (mixing in the new dye)
+    const centerX = lastMouseX / canvas.width;
+    const centerY = 1.0 - (lastMouseY / canvas.height); // Flip Y for GL space
+
+    // Get live color values
+    const r = parseFloat(document.getElementById('dyeR').value);
+    const g = parseFloat(document.getElementById('dyeG').value);
+    const b = parseFloat(document.getElementById('dyeB').value);
+    
+    // Scale splat size by force
+    const force = parseFloat(document.getElementById('force').value) / 10000;
+
+    runProgram(splatProgram, dyeState.current.texture, dyeState.next.fbo, {
+      u_center: [centerX, centerY],
+      u_radius: 0.015 * force * 5.0, // Scale radius by force
+      u_dyeColor: [r, g, b], 
+      u_dyeForce: force * 50.0 // Alpha strength
+    });
+    dyeState.swap(); // The new splatted state becomes the current state
+  }
+
+  // 3. RENDER PASS (to screen)
+  // Read from dyeState.current, write to null (screen)
+  gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
+  gl.clear(gl.COLOR_BUFFER_BIT);
+  gl.clearColor(0.0, 0.0, 0.0, 1.0); // Clear screen to black before rendering dye
+  runProgram(renderProgram, dyeState.current.texture, null, {});
+}
+
+// --- Event Handling ---
+
+canvas.addEventListener('mousedown', e => {
+  mouseIsDown = true;
+  lastMouseX = e.clientX;
+  lastMouseY = e.clientY;
+});
+canvas.addEventListener('mouseup', () => {
+  mouseIsDown = false;
+});
+canvas.addEventListener('mousemove', e => {
+  if (mouseIsDown) {
+    lastMouseX = e.clientX;
+    lastMouseY = e.clientY;
+  }
+});
+document.getElementById('dyeR').addEventListener('input', () => { if (mouseIsDown) mouseIsDown = false; });
+document.getElementById('dyeG').addEventListener('input', () => { if (mouseIsDown) mouseIsDown = false; });
+document.getElementById('dyeB').addEventListener('input', () => { if (mouseIsDown) mouseIsDown = false; });
+
+
+let lastTime = 0;
+function render(time) {
+  const deltaTime = (time - lastTime) / 1000.0;
+  lastTime = time;
+  updateDye(deltaTime);
   requestAnimationFrame(render);
 }
 requestAnimationFrame(render);

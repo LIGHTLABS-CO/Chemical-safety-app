@@ -2,102 +2,307 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>What's My IP?</title>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <title>Real-time reflective sphere over 3D street</title>
   <style>
-    body {
-      margin: 0;
-      padding: 0;
-      font-family: 'Poppins', sans-serif;
-      background-color: #111;
-      color: #fff;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-      text-align: center;
-      padding: 20px;
+    body { margin: 0; overflow: hidden; background: #000; }
+    canvas { display: block; }
+    #ui {
+      position: absolute;
+      top: 10px; left: 10px;
+      background: rgba(0,0,0,0.6);
+      color: #fff; padding: 10px 12px;
+      border-radius: 8px; font-family: system-ui, sans-serif;
+      max-width: 320px;
     }
-    .ip-box {
-      background: #222;
-      padding: 30px;
-      border-radius: 10px;
-      box-shadow: 0 0 15px rgba(0,0,0,0.4);
-      max-width: 480px;
-      width: 100%;
-      margin-bottom: 30px;
-    }
-    h1 {
-      color: #ffc107;
-      margin-bottom: 10px;
-    }
-    .info {
-      margin: 8px 0;
-      font-size: 16px;
-    }
-    button {
-      margin-top: 15px;
-      padding: 10px 20px;
-      background-color: #ffc107;
-      color: #111;
-      border: none;
-      border-radius: 6px;
-      font-weight: bold;
-      cursor: pointer;
-    }
-    .ad-box {
-      margin-top: 20px;
-    }
+    #ui label { display: flex; justify-content: space-between; align-items: center; margin: 6px 0; font-size: 13px; }
+    #ui input[type=range] { width: 160px; margin-left: 8px; }
+    #ui .title { font-weight: 600; margin-bottom: 6px; }
+    #ui .row { display: flex; gap: 8px; }
+    #ui button { background: #2a2a2a; color: #fff; border: 1px solid #444; padding: 6px 8px; border-radius: 6px; cursor: pointer; }
+    #ui button:hover { background: #3a3a3a; }
   </style>
 </head>
 <body>
-
-  <div class="ip-box">
-    <h1>Your IP Address</h1>
-    <div class="info" id="ip">Detecting...</div>
-    <div class="info" id="isp"></div>
-    <div class="info" id="location"></div>
-    <div class="info" id="ua"></div>
-    <button onclick="copyIP()">Copy IP</button>
+  <div id="ui">
+    <div class="title">Sphere material</div>
+    <label><span>Metalness</span><input id="metalness" type="range" min="0" max="1" step="0.01" value="1"></label>
+    <label><span>Roughness</span><input id="roughness" type="range" min="0" max="1" step="0.01" value="0.1"></label>
+    <label><span>Reflectivity</span><input id="reflectivity" type="range" min="0" max="1" step="0.01" value="1"></label>
+    <label><span>Clearcoat</span><input id="clearcoat" type="range" min="0" max="1" step="0.01" value="0.3"></label>
+    <label><span>Coat roughness</span><input id="clearcoatRoughness" type="range" min="0" max="1" step="0.01" value="0.05"></label>
+    <label><span>Sphere height</span><input id="height" type="range" min="0.5" max="4" step="0.01" value="1.6"></label>
+    <div class="title" style="margin-top:8px;">Scene</div>
+    <label><span>Env intensity</span><input id="envIntensity" type="range" min="0" max="2" step="0.01" value="1"></label>
+    <div class="row" style="margin-top:6px;">
+      <button id="toggleTone">Toggle ACES tone</button>
+      <button id="resetCam">Reset camera</button>
+    </div>
   </div>
 
-  <div class="ad-box">
-    <!-- Adsterra Banner Ad (468x60) -->
-    <script type="text/javascript">  
-      atOptions = {  
-        'key' : '6cd6931c37fc427ed210ce5fd3ce7f00',  
-        'format' : 'iframe',  
-        'height' : 60,  
-        'width' : 468,  
-        'params' : {}  
-      };  
-    </script>  
-    <script type="text/javascript" src="//www.highperformanceformat.com/6cd6931c37fc427ed210ce5fd3ce7f00/invoke.js"></script>
-  </div>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/loaders/RGBELoader.js"></script>
 
   <script>
-    async function getIPInfo() {
-      try {
-        const res = await fetch("https://ipapi.co/json");
-        const data = await res.json();
-        document.getElementById("ip").innerText = "IP: " + data.ip;
-        document.getElementById("isp").innerText = "ISP: " + data.org;
-        document.getElementById("location").innerText = `Location: ${data.city}, ${data.region}, ${data.country_name}`;
-        document.getElementById("ua").innerText = "Device: " + navigator.userAgent;
-      } catch (e) {
-        document.getElementById("ip").innerText = "Unable to detect IP.";
-      }
+    // Renderer
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.0;
+    document.body.appendChild(renderer.domElement);
+
+    // Scene & camera
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 500);
+    camera.position.set(5, 3, 8);
+
+    // Controls
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.target.set(0, 1, 0);
+
+    // Environment (HDR for lighting)
+    const rgbeLoader = new THREE.RGBELoader();
+    rgbeLoader.setPath('https://threejs.org/examples/textures/equirectangular/');
+    rgbeLoader.load('royal_esplanade_1k.hdr', (hdr) => {
+      hdr.mapping = THREE.EquirectangularReflectionMapping;
+      scene.environment = hdr;
+      scene.background = hdr;
+    });
+
+    // Lights
+    const hemi = new THREE.HemisphereLight(0xffffff, 0x444466, 0.6);
+    hemi.position.set(0, 30, 0);
+    scene.add(hemi);
+
+    const sun = new THREE.DirectionalLight(0xffffff, 1.2);
+    sun.position.set(10, 15, 5);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(1024, 1024);
+    sun.shadow.camera.near = 1;
+    sun.shadow.camera.far = 50;
+    sun.shadow.camera.left = -20;
+    sun.shadow.camera.right = 20;
+    sun.shadow.camera.top = 20;
+    sun.shadow.camera.bottom = -20;
+    scene.add(sun);
+
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+    // Materials
+    const asphaltMat = new THREE.MeshStandardMaterial({ color: 0x2a2a2a, roughness: 0.95, metalness: 0.0 });
+    const sidewalkMat = new THREE.MeshStandardMaterial({ color: 0x9da3a6, roughness: 0.85, metalness: 0.0 });
+    const buildingMat = new THREE.MeshStandardMaterial({ color: 0xdddddd, roughness: 0.75, metalness: 0.0 });
+    const glassMat = new THREE.MeshPhysicalMaterial({
+      color: 0x88a8c8, metalness: 0.0, roughness: 0.05, transmission: 0.8, thickness: 0.2
+    });
+    const poleMat = new THREE.MeshStandardMaterial({ color: 0x444a4f, roughness: 0.6, metalness: 0.8 });
+
+    // Street: road + sidewalks
+    const road = new THREE.Mesh(new THREE.PlaneGeometry(20, 60), asphaltMat);
+    road.rotation.x = -Math.PI / 2;
+    road.receiveShadow = true;
+    scene.add(road);
+
+    // Lane markings
+    const laneGroup = new THREE.Group();
+    for (let i = -25; i <= 25; i += 5) {
+      const mark = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.01, 2), new THREE.MeshStandardMaterial({ color: 0xffffee }));
+      mark.position.set(0, 0.005, i);
+      mark.receiveShadow = true;
+      laneGroup.add(mark);
+    }
+    scene.add(laneGroup);
+
+    // Sidewalks
+    const sidewalkLeft = new THREE.Mesh(new THREE.BoxGeometry(3, 0.2, 60), sidewalkMat);
+    sidewalkLeft.position.set(-6.5, 0.1, 0);
+    sidewalkLeft.receiveShadow = true;
+    scene.add(sidewalkLeft);
+
+    const sidewalkRight = sidewalkLeft.clone();
+    sidewalkRight.position.x = 6.5;
+    scene.add(sidewalkRight);
+
+    // Buildings (simple blocks with some glass)
+    function addBuilding(x, z, w = 4, d = 6, h = 8, color = 0xdddddd) {
+      const bMat = buildingMat.clone();
+      bMat.color.setHex(color);
+      const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), bMat);
+      b.position.set(x, h / 2, z);
+      b.castShadow = true; b.receiveShadow = true;
+      scene.add(b);
+
+      // Glass facade strip
+      const glass = new THREE.Mesh(new THREE.BoxGeometry(w * 0.9, h * 0.3, 0.05), glassMat);
+      glass.position.set(x, h * 0.6, z + d/2 + 0.03);
+      glass.castShadow = false; glass.receiveShadow = true;
+      scene.add(glass);
     }
 
-    function copyIP() {
-      const ip = document.getElementById("ip").innerText.replace("IP: ", "");
-      navigator.clipboard.writeText(ip).then(() => alert("IP copied to clipboard!"));
+    for (let i = -20; i <= 20; i += 10) {
+      addBuilding(-10, i, 5, 7, 9, 0xcfcfcf);
+      addBuilding(10, i + 5, 6, 6, 11, 0xe6e6e6);
+      addBuilding(-13, i + 2, 4, 5, 7, 0xd9d9d9);
+      addBuilding(13, i - 2, 4, 5, 8, 0xeeeeee);
     }
 
-    getIPInfo();
+    // Lampposts
+    function addLamp(x, z) {
+      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 4, 16), poleMat);
+      pole.position.set(x, 2, z);
+      pole.castShadow = true;
+
+      const head = new THREE.Mesh(new THREE.SphereGeometry(0.18, 16, 16), new THREE.MeshStandardMaterial({ color: 0xfff3c0, emissive: 0xffd27a, emissiveIntensity: 1.5 }));
+      head.position.set(x, 4.1, z);
+      head.castShadow = false;
+
+      const spot = new THREE.SpotLight(0xffe9b0, 0.6, 12, Math.PI/5, 0.25, 1.2);
+      spot.position.set(x, 4.2, z);
+      spot.target.position.set(x, 0, z + 1);
+      spot.castShadow = true;
+      scene.add(spot);
+      scene.add(spot.target);
+
+      scene.add(pole);
+      scene.add(head);
+    }
+
+    for (let i = -20; i <= 20; i += 10) {
+      addLamp(-4.5, i);
+      addLamp(4.5, i + 5);
+    }
+
+    // Cars (simple stylized blocks)
+    function addCar(x, z, color = 0x2f60ff) {
+      const body = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.6, 3.2), new THREE.MeshStandardMaterial({ color, roughness: 0.5, metalness: 0.3 }));
+      body.position.set(x, 0.35, z);
+      body.castShadow = true; body.receiveShadow = true;
+
+      const roof = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.4, 1.6), new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.4, metalness: 0.1 }));
+      roof.position.set(x, 0.75, z - 0.4);
+      roof.castShadow = true;
+
+      const glass = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.3, 1.2), glassMat);
+      glass.position.set(x, 0.75, z - 0.4);
+
+      scene.add(body);
+      scene.add(roof);
+      scene.add(glass);
+    }
+
+    addCar(-1.5, -5, 0xff3333);
+    addCar(2.0, 6, 0x33cc88);
+
+    // Metallic sphere with dynamic reflections
+    const sphereMat = new THREE.MeshPhysicalMaterial({
+      color: 0xffffff,
+      metalness: 1.0,
+      roughness: 0.1,
+      reflectivity: 1.0,
+      clearcoat: 0.3,
+      clearcoatRoughness: 0.05
+    });
+    const sphere = new THREE.Mesh(new THREE.SphereGeometry(1, 96, 96), sphereMat);
+    sphere.position.set(0, 1.6, 0);
+    sphere.castShadow = true; sphere.receiveShadow = true;
+    scene.add(sphere);
+
+    // Dynamic cube camera for local reflections (ray-tracing-like)
+    const cubeRenderTarget = new THREE.WebGLCubeRenderTarget(512, { type: THREE.HalfFloatType, generateMipmaps: true, minFilter: THREE.LinearMipmapLinearFilter });
+    const cubeCamera = new THREE.CubeCamera(0.1, 200, cubeRenderTarget);
+
+    // Place cube camera at sphere center
+    cubeCamera.position.copy(sphere.position);
+    scene.add(cubeCamera);
+
+    // UI bindings
+    const ui = {
+      metalness: document.getElementById('metalness'),
+      roughness: document.getElementById('roughness'),
+      reflectivity: document.getElementById('reflectivity'),
+      clearcoat: document.getElementById('clearcoat'),
+      clearcoatRoughness: document.getElementById('clearcoatRoughness'),
+      height: document.getElementById('height'),
+      envIntensity: document.getElementById('envIntensity'),
+      toggleTone: document.getElementById('toggleTone'),
+      resetCam: document.getElementById('resetCam'),
+    };
+
+    function updateMaterial() {
+      sphereMat.metalness = parseFloat(ui.metalness.value);
+      sphereMat.roughness = parseFloat(ui.roughness.value);
+      sphereMat.reflectivity = parseFloat(ui.reflectivity.value);
+      sphereMat.clearcoat = parseFloat(ui.clearcoat.value);
+      sphereMat.clearcoatRoughness = parseFloat(ui.clearcoatRoughness.value);
+      sphere.position.y = parseFloat(ui.height.value);
+    }
+
+    ui.metalness.oninput = updateMaterial;
+    ui.roughness.oninput = updateMaterial;
+    ui.reflectivity.oninput = updateMaterial;
+    ui.clearcoat.oninput = updateMaterial;
+    ui.clearcoatRoughness.oninput = updateMaterial;
+    ui.height.oninput = updateMaterial;
+
+    ui.envIntensity.oninput = () => {
+      const intensity = parseFloat(ui.envIntensity.value);
+      scene.traverse(obj => {
+        if (obj.isMesh && obj.material && 'envMapIntensity' in obj.material) {
+          obj.material.envMapIntensity = intensity;
+        }
+      });
+    };
+
+    ui.toggleTone.onclick = () => {
+      renderer.toneMapping = (renderer.toneMapping === THREE.ACESFilmicToneMapping)
+        ? THREE.NoToneMapping
+        : THREE.ACESFilmicToneMapping;
+    };
+
+    ui.resetCam.onclick = () => {
+      controls.target.set(0, 1, 0);
+      camera.position.set(5, 3, 8);
+      controls.update();
+    };
+
+    // Initial env map intensity
+    ui.envIntensity.oninput();
+
+    // Animation
+    let t = 0;
+    function animate() {
+      requestAnimationFrame(animate);
+
+      // Subtle hover motion
+      t += 0.01;
+      sphere.position.y = parseFloat(ui.height.value) + Math.sin(t) * 0.05;
+      cubeCamera.position.copy(sphere.position);
+
+      // Update cube env map for the sphere: hide sphere, render cube, show sphere
+      sphere.visible = false;
+      cubeCamera.update(renderer, scene);
+      sphere.visible = true;
+
+      // Assign dynamic envMap to sphere material
+      sphereMat.envMap = cubeRenderTarget.texture;
+      sphereMat.needsUpdate = true;
+
+      controls.update();
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    // Resize
+    window.addEventListener('resize', () => {
+      const w = window.innerWidth, h = window.innerHeight;
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+      renderer.setSize(w, h);
+    });
   </script>
-
 </body>
 </html>

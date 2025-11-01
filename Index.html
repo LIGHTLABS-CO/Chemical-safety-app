@@ -236,10 +236,10 @@ document.body.appendChild(renderer.domElement);
 let gl = renderer.getContext();
 
 /* --- Dye Simulation State --- */
-const SIM_SIZE = 512; // simulation resolution
+// Downgraded: Reduced simulation resolution for performance
+const SIM_SIZE = 256; // simulation resolution
 let dyeState = null; // simulation framebuffer
 let dyeStateSwap = null; // swap buffer
-// let dyeTexture = null; // Removed - not needed with updated draw logic
 
 let mouseDown = false, touchActive = false;
 let mouseX = 0, mouseY = 0;
@@ -449,7 +449,8 @@ void main() {
 function createFramebuffer(size) {
   let rt = new THREE.WebGLRenderTarget(size,size,{
     format: THREE.RGBAFormat,
-    type: THREE.FloatType,
+    // Downgraded: Using HalfFloatType (16-bit float) for better hardware compatibility
+    type: THREE.HalfFloatType, 
     minFilter: THREE.LinearFilter,
     magFilter: THREE.LinearFilter,
     depthBuffer: false,

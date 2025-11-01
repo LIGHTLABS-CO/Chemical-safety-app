@@ -148,7 +148,6 @@
     Built with three.js and custom GLSL shaders.<br/>
     <a href="https://github.com/LIGHTLABS-CO" target="_blank">LIGHTLABS-CO</a>
   </div>
-  <!-- three.js from CDN -->
   <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
   <script>
 /* ---- Dye Mixing Lab - Advanced Diffusion Simulation ---- */
@@ -240,7 +239,7 @@ let gl = renderer.getContext();
 const SIM_SIZE = 512; // simulation resolution
 let dyeState = null; // simulation framebuffer
 let dyeStateSwap = null; // swap buffer
-let dyeTexture = null; // display texture
+// let dyeTexture = null; // Removed - not needed with updated draw logic
 
 let mouseDown = false, touchActive = false;
 let mouseX = 0, mouseY = 0;
@@ -523,6 +522,7 @@ function updateDye() {
         drop.type==='spray'?2:
         drop.type==='ring'?3:0
       );
+      // NOTE: Render dye drops to the *current* simulation state.
       renderer.setRenderTarget(dyeState);
       renderer.render(dyeDropScene, new THREE.Camera());
     });
@@ -530,6 +530,7 @@ function updateDye() {
   }
 
   // 2. Update diffusion shader uniforms
+  // NOTE: This updates the shader with the texture from the *current* state.
   dyeMesh.material.uniforms.dye.value = dyeState.texture;
   dyeMesh.material.uniforms.diffuseSpeed.value = uiState.diffuseSpeed;
   dyeMesh.material.uniforms.turbulence.value = uiState.turbulence;
@@ -537,34 +538,35 @@ function updateDye() {
   dyeMesh.material.uniforms.smear.value = uiState.smear;
   dyeMesh.material.uniforms.stirVec.value.set(stirDX, stirDY);
 
-  // 3. Swap buffers: Run dye simulation shader
+  // 3. Swap buffers: Run dye simulation shader to calculate the *next* state
   renderer.setRenderTarget(dyeStateSwap);
   renderer.render(dyeScene, new THREE.Camera());
 
-  // 4. Swap textures
+  // 4. Swap textures (next state becomes current state)
   let tmp = dyeState;
   dyeState = dyeStateSwap;
   dyeStateSwap = tmp;
 
-  renderer.setRenderTarget(null);
+  renderer.setRenderTarget(null); // Return to drawing on the screen
 }
 
 /* --- Draw Dye to Main Canvas --- */
 function drawDyeToCanvas() {
   // Render dye texture as a full-screen quad with background
   gl.viewport(0, 0, WIDTH, HEIGHT);
-  // Draw background
+  
+  // 1. Draw background
   let bgRGB = hslToRgb(uiState.bgHue, 35, uiState.bgBright*100);
   renderer.setClearColor(rgbToHex(...bgRGB), 1);
   renderer.clear();
 
-  // Draw dye simulation
-  renderer.copyTextureToTexture(
-    new THREE.Vector2(0,0),
-    dyeState.texture,
-    dyeTexture
-  );
+  // 2. Draw dye simulation (using the current dyeState.texture)
+  // We need to re-set the texture on the mesh for the main render pass.
+  dyeMesh.material.uniforms.dye.value = dyeState.texture;
   renderer.render(dyeScene, new THREE.Camera());
+
+  // NOTE: Removed the flawed renderer.copyTextureToTexture logic, as the
+  // dyeMesh uses the dyeState.texture and can be rendered directly to the screen.
 }
 
 /* --- Animation Loop --- */
@@ -573,6 +575,9 @@ function animate() {
   drawDyeToCanvas();
   requestAnimationFrame(animate);
 }
+
+/* --- Initialization --- */
+resetDye(); // Initialize the framebuffers
 animate();
 
 /* --- Mouse/Touch Interactions --- */
@@ -652,11 +657,13 @@ renderer.domElement.addEventListener('touchend', e=>{
 function resetDye() {
   // Fill dye texture with transparent
   renderer.setRenderTarget(dyeState);
-  renderer.clearColor();
+  renderer.setClearColor(0x000000, 0); // Clear with transparent black
   renderer.clear();
   renderer.setRenderTarget(dyeStateSwap);
-  renderer.clearColor();
+  renderer.setClearColor(0x000000, 0); // Clear with transparent black
   renderer.clear();
+  renderer.setRenderTarget(null); // Return to drawing on the screen
+
   dyeDrops = [];
   dyeMixColor = [0,0,0];
   dyeMixCount = 0;

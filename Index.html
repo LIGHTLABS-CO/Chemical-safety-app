@@ -1,689 +1,166 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Dye Mixing & Realistic Diffusion Simulator</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1.0">
-  <style>
-    body { margin: 0; padding: 0; overflow: hidden; background: #1e2030; }
-    canvas { display: block; }
-    #ui {
-      position: absolute;
-      left: 20px; top: 20px;
-      background: rgba(28,32,48,0.85);
-      color: #fff; font-family: system-ui,sans-serif;
-      border-radius: 14px; padding: 20px 22px;
-      min-width: 320px; max-width: 370px;
-      z-index: 3;
-      box-shadow: 0 4px 32px rgba(0,0,0,0.22);
-      font-size: 14px;
-    }
-    #ui h1 { font-size: 21px; margin: 0 0 14px 0; font-weight: 800; }
-    #ui .subtitle { color: #a7c6ff; font-size: 13px; font-weight: 500; margin: 16px 0 6px 0; }
-    #ui label { display: flex; align-items: center; justify-content: space-between; margin: 8px 0; }
-    #ui input[type=range] { width: 160px; margin-left: 12px; }
-    #ui select, #ui input[type=color] { margin-left: 12px; }
-    #ui button { background: #243060; color: #fff; font-size: 13px; font-weight: 500; border: 0; border-radius: 7px; padding: 7px 16px; margin: 4px 3px 0 0; cursor: pointer; }
-    #ui button:hover { background: #3656be; }
-    #ui .row { display: flex; gap: 8px; margin-top: 8px; }
-    #ui .color-btn { width: 28px; height: 28px; border-radius: 50%; border: 2px solid #fff; margin-right: 8px; cursor: pointer; }
-    #ui .color-btn.selected { box-shadow: 0 0 0 3px #fff; }
-    #ui .info { font-size: 12px; color: #a2a6b3; margin-top: 17px;}
-    #credits {
-      position: absolute; right: 22px; bottom: 12px;
-      color: #bbc6ea; font-size: 12px; background: rgba(0,0,0,0.20);
-      padding: 8px 14px; border-radius: 8px; z-index: 3;
-      font-family: system-ui,sans-serif;
-    }
-    #credits a { color: #a7c6ff; text-decoration: none; }
-    #touchGuide {
-      position: absolute; left: 50%; top: 70px; transform: translateX(-50%);
-      color: #fff; font-size: 15px; background: rgba(30,40,60,0.85); padding: 14px 26px;
-      border-radius: 12px; z-index: 3; font-family: system-ui,sans-serif;
-      box-shadow: 0 6px 32px rgba(0,0,0,0.13);
-      pointer-events: none;
-      opacity: 0; transition: opacity 0.4s cubic-bezier(.4,.8,.2,1);
-    }
-    #touchGuide.show { opacity: 1; }
-    #ui .color-row { display: flex; gap: 7px; margin-top: 7px; }
-    #ui .swatch { width: 22px; height: 22px; border-radius: 50%; border: 2px solid #fff; margin-right: 6px; cursor: pointer; }
-    #ui .swatch.selected { box-shadow: 0 0 0 2px #fff; }
-    #ui .slider-label { width: 112px; display: inline-block; }
-    #ui .value { width: 38px; text-align: right; padding-left: 8px; font-size: 13px; color: #a7c6ff; font-weight: 500; }
-    #ui .tip { font-size: 12px; color: #7da7ff; margin-top: 6px; }
-    #ui .about {
-      margin-top: 14px;
-      font-size: 12.5px; color: #a2a6b3; line-height: 1.5;
-      background: rgba(34,40,60,0.24); padding: 9px 14px; border-radius: 7px;
-    }
-    #ui .about b { color: #a7c6ff; }
-    #resetBtn { margin-top: 10px; background: #d94343 !important; color: #fff !important; }
-    #ui .row .color-btn:last-child { margin-right: 0; }
-    #ui .slider-wrap { display: flex; align-items: center; }
-    #ui .slider-wrap input[type=range] { flex: 1; }
-    #ui .slider-wrap .value { flex: 0 0 46px; }
-    #ui .slider-wrap .slider-label { margin-right: 10px; }
-    #ui .swatch-wrap { display: flex; align-items: center; gap: 7px; }
-    #ui .swatch-label { font-size: 13px; color: #a7c6ff; margin-right: 10px; }
-    #ui .swatch-row { margin: 8px 0 0 0; }
-    @media (max-width: 780px) {
-      #ui { left: 8px; top: 8px; min-width: 0; max-width: 98vw; padding: 11px 7px;}
-      #credits { right: 8px; bottom: 8px; padding: 7px 7px;}
-      #touchGuide { font-size: 12.5px; padding: 12px 10px;}
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Dye Mixing Simulator</title>
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    overflow: hidden;
+    background: radial-gradient(circle at center, #0f2027, #203a43, #2c5364);
+  }
+  canvas {
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    cursor: crosshair;
+  }
+  #ui {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    color: white;
+    font-family: sans-serif;
+    z-index: 2;
+  }
+  input[type=range] {
+    width: 200px;
+  }
+</style>
 </head>
 <body>
-  <div id="ui">
-    <h1>Dye Mixing Lab</h1>
-    <div class="subtitle">Dye Dropper</div>
-    <div class="color-row" id="colorRow"></div>
-    <div class="slider-wrap">
-      <span class="slider-label">Drop Size</span>
-      <input type="range" id="dropSize" min="10" max="80" step="1" value="28">
-      <span class="value" id="dropSizeVal">28</span>
-    </div>
-    <div class="slider-wrap">
-      <span class="slider-label">Drop Intensity</span>
-      <input type="range" id="dropAlpha" min="0.1" max="1" step="0.01" value="0.7">
-      <span class="value" id="dropAlphaVal">0.7</span>
-    </div>
-    <div class="slider-wrap">
-      <span class="slider-label">Drop Type</span>
-      <select id="dropType">
-        <option value="circular">Circular</option>
-        <option value="splash">Splash</option>
-        <option value="spray">Spray</option>
-        <option value="ring">Ring</option>
-      </select>
-    </div>
-    <div class="row">
-      <button id="addDropBtn">Add Drop</button>
-      <button id="resetBtn">Reset</button>
-    </div>
-    <div class="tip">Tip: Try swiping or stirring to mix dyes!</div>
-    <div class="subtitle" style="margin-top:14px;">Diffusion & Mix</div>
-    <div class="slider-wrap">
-      <span class="slider-label">Diffusion Speed</span>
-      <input type="range" id="diffuseSpeed" min="0.1" max="3.5" step="0.01" value="1.3">
-      <span class="value" id="diffuseSpeedVal">1.3</span>
-    </div>
-    <div class="slider-wrap">
-      <span class="slider-label">Turbulence</span>
-      <input type="range" id="turbulence" min="0" max="0.12" step="0.001" value="0.02">
-      <span class="value" id="turbulenceVal">0.02</span>
-    </div>
-    <div class="slider-wrap">
-      <span class="slider-label">Viscosity</span>
-      <input type="range" id="viscosity" min="0.5" max="3.5" step="0.01" value="1.1">
-      <span class="value" id="viscosityVal">1.1</span>
-    </div>
-    <div class="slider-wrap">
-      <span class="slider-label">Color Smear</span>
-      <input type="range" id="smear" min="0" max="1" step="0.01" value="0.14">
-      <span class="value" id="smearVal">0.14</span>
-    </div>
-    <div class="subtitle" style="margin-top:14px;">Background</div>
-    <div class="slider-wrap">
-      <span class="slider-label">Hue</span>
-      <input type="range" id="bgHue" min="180" max="330" step="1" value="210">
-      <span class="value" id="bgHueVal">210</span>
-    </div>
-    <div class="slider-wrap">
-      <span class="slider-label">Brightness</span>
-      <input type="range" id="bgBright" min="0.05" max="0.7" step="0.01" value="0.16">
-      <span class="value" id="bgBrightVal">0.16</span>
-    </div>
-    <div class="about">
-      <b>Dye Mixing Lab</b> – Interactive simulation of dye mixing and realistic diffusion.<br>
-      <b>Swipe</b> or <b>drag</b> to stir and mix dyes.<br>
-      Uses advanced shader diffusion and physical-inspired mixing.<br>
-      <a href="https://github.com/LIGHTLABS-CO" target="_blank">By LIGHTLABS-CO</a>
-    </div>
-    <div class="info" id="info"></div>
-  </div>
-  <div id="touchGuide">Swipe or drag to stir the dyes!</div>
-  <div id="credits">
-    Standalone dye mixing demo &copy; 2025<br/>
-    Built with three.js and custom GLSL shaders.<br/>
-    <a href="https://github.com/LIGHTLABS-CO" target="_blank">LIGHTLABS-CO</a>
-  </div>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
-  <script>
-/* ---- Dye Mixing Lab - Advanced Diffusion Simulation ---- */
-/* ---- Copyright 2025 LIGHTLABS-CO ---- */
-/* ---- All code, shaders, and art generated in-file ---- */
+<div id="ui">
+  <label>Viscosity <input id="viscosity" type="range" min="0.9" max="0.999" step="0.001" value="0.99"></label><br>
+  <label>Diffusion <input id="diffusion" type="range" min="0.0001" max="0.01" step="0.0001" value="0.001"></label><br>
+  <label>Force <input id="force" type="range" min="0.1" max="5" step="0.1" value="1"></label><br>
+</div>
+<canvas id="glcanvas"></canvas>
+<script>
+const canvas = document.getElementById('glcanvas');
+const gl = canvas.getContext('webgl');
+if (!gl) {
+  alert('WebGL not supported');
+}
 
-/* --- Constants and Utility Functions --- */
-const DYE_COLORS = [
-  {name:'Azure',    hex:'#3da9fc'},
-  {name:'Pink',     hex:'#ff6fcb'},
-  {name:'Lime',     hex:'#48f48c'},
-  {name:'Yellow',   hex:'#ffe75c'},
-  {name:'Orange',   hex:'#ffbe3c'},
-  {name:'Purple',   hex:'#b158ff'},
-  {name:'Red',      hex:'#ff3b3b'},
-  {name:'Turquoise',hex:'#1fffc8'},
-  {name:'Violet',   hex:'#a6c3ff'},
-  {name:'Mint',     hex:'#b9ffd6'},
-  {name:'Magenta',  hex:'#ff47d2'},
-  {name:'Teal',     hex:'#3dffa9'},
-  {name:'White',    hex:'#f8faff'},
-  {name:'Black',    hex:'#22282a'}
-];
-function hexToRGB(hex) {
-  hex = hex.replace('#','');
-  if(hex.length===3) hex=hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2];
-  let num = parseInt(hex,16);
-  return [(num>>16)&255,(num>>8)&255,num&255];
+function resizeCanvas() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
 }
-function rgbToHex(r,g,b) {
-  return "#"+((1<<24)|(r<<16)|(g<<8)|b).toString(16).substr(1);
-}
-function clamp(v,a,b) { return Math.max(a,Math.min(b,v)); }
-function lerp(a,b,t) { return a+(b-a)*t; }
-function dist(x1,y1,x2,y2) { return Math.sqrt((x2-x1)**2 + (y2-y1)**2); }
-function hslToRgb(h, s, l) {
-  h = h/360; s = s/100; l = l/100;
-  let r,g,b;
-  if(s===0) r=g=b=l;
-  else {
-    const hue2rgb=(p,q,t)=>{
-      if(t<0)t+=1;if(t>1)t-=1;
-      if(t<1/6)return p+(q-p)*6*t;
-      if(t<1/2)return q;
-      if(t<2/3)return p+(q-p)*(2/3-t)*6;
-      return p;
-    };
-    let q = l<0.5?l*(1+s):l+s-l*s;
-    let p = 2*l-q;
-    r = hue2rgb(p,q,h+1/3);g=hue2rgb(p,q,h);b=hue2rgb(p,q,h-1/3);
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+function createShader(gl, type, source) {
+  const shader = gl.createShader(type);
+  gl.shaderSource(shader, source);
+  gl.compileShader(shader);
+  if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+    console.error(gl.getShaderInfoLog(shader));
+    gl.deleteShader(shader);
+    return null;
   }
-  return [Math.round(r*255),Math.round(g*255),Math.round(b*255)];
+  return shader;
 }
-function rgbToHsl(r,g,b) {
-  r/=255;g/=255;b/=255;
-  let max=Math.max(r,g,b),min=Math.min(r,g,b);
-  let h,s,l=(max+min)/2;
-  if(max===min)h=s=0;
-  else {
-    let d=max-min;
-    s=l>0.5?d/(2-max-min):d/(max+min);
-    switch(max){
-      case r:h=(g-b)/d+(g<b?6:0);break;
-      case g:h=(b-r)/d+2;break;
-      case b:h=(r-g)/d+4;break;
-    }
-    h*=60;
+
+function createProgram(gl, vsrc, fsrc) {
+  const vs = createShader(gl, gl.VERTEX_SHADER, vsrc);
+  const fs = createShader(gl, gl.FRAGMENT_SHADER, fsrc);
+  const prog = gl.createProgram();
+  gl.attachShader(prog, vs);
+  gl.attachShader(prog, fs);
+  gl.linkProgram(prog);
+  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
+    console.error(gl.getProgramInfoLog(prog));
+    gl.deleteProgram(prog);
+    return null;
   }
-  return [h,s*100,l*100];
+  return prog;
 }
 
-/* --- Canvas and Renderer Setup --- */
-const WIDTH = Math.min(window.innerWidth, 1024);
-const HEIGHT = Math.min(window.innerHeight, 630);
+const vertexShaderSrc = `
+attribute vec2 a_position;
+varying vec2 v_uv;
+void main() {
+  v_uv = a_position * 0.5 + 0.5;
+  gl_Position = vec4(a_position, 0.0, 1.0);
+}`;
 
-// Use THREE.js for UI (for future extensibility), but main dye simulation is in WebGL2 shaders
-let renderer = new THREE.WebGLRenderer({canvas:null,antialias:true,preserveDrawingBuffer:true});
-renderer.setSize(WIDTH,HEIGHT);
-renderer.setClearColor(0x22282a, 1);
-renderer.domElement.style.position = "absolute";
-renderer.domElement.style.left = "0";
-renderer.domElement.style.top = "0";
-renderer.domElement.style.zIndex = "1";
-document.body.appendChild(renderer.domElement);
-
-let gl = renderer.getContext();
-
-/* --- Dye Simulation State --- */
-// Optimized for broader compatibility (was 512)
-const SIM_SIZE = 256; 
-let dyeState = null; // simulation framebuffer
-let dyeStateSwap = null; // swap buffer
-
-let mouseDown = false, touchActive = false;
-let mouseX = 0, mouseY = 0;
-let lastX = 0, lastY = 0;
-let lastTime = Date.now();
-let stirDX = 0, stirDY = 0;
-let stirAmount = 0;
-let dragPath = [];
-
-let dyeDrops = [];
-let dyeMixColor = [0,0,0];
-let dyeMixCount = 0;
-
-/* --- User Controls State --- */
-let uiState = {
-  dyeColor: hexToRGB(DYE_COLORS[0].hex),
-  dyeAlpha: 0.7,
-  dyeSize: 28,
-  dyeType: 'circular',
-  diffuseSpeed: 1.3,
-  turbulence: 0.02,
-  viscosity: 1.1,
-  smear: 0.14,
-  bgHue: 210,
-  bgBright: 0.16,
-};
-
-/* --- UI Setup --- */
-function setupUI() {
-  // Dye color swatches
-  const colorRow = document.getElementById('colorRow');
-  DYE_COLORS.forEach((col,i)=>{
-    let btn = document.createElement('div');
-    btn.className = "color-btn"+(i===0?" selected":"");
-    btn.style.background = col.hex;
-    btn.title = col.name;
-    btn.onclick = ()=>{
-      document.querySelectorAll('.color-btn').forEach(b=>b.classList.remove('selected'));
-      btn.classList.add('selected');
-      uiState.dyeColor = hexToRGB(col.hex);
-      document.getElementById('info').innerText = `Selected dye: ${col.name}`;
-    };
-    colorRow.appendChild(btn);
-  });
-
-  // Drop size
-  let dropSize = document.getElementById('dropSize');
-  let dropSizeVal = document.getElementById('dropSizeVal');
-  dropSize.oninput = ()=>{uiState.dyeSize = parseInt(dropSize.value); dropSizeVal.innerText = dropSize.value;}
-  dropSizeVal.innerText = dropSize.value;
-
-  // Drop alpha
-  let dropAlpha = document.getElementById('dropAlpha');
-  let dropAlphaVal = document.getElementById('dropAlphaVal');
-  dropAlpha.oninput = ()=>{uiState.dyeAlpha = parseFloat(dropAlpha.value); dropAlphaVal.innerText = dropAlpha.value;}
-  dropAlphaVal.innerText = dropAlpha.value;
-
-  // Drop type
-  let dropType = document.getElementById('dropType');
-  dropType.onchange = ()=>{uiState.dyeType = dropType.value;}
-
-  // Add drop button
-  document.getElementById('addDropBtn').onclick = ()=>{
-    addDyeDrop(WIDTH/2,HEIGHT/2,uiState.dyeColor,uiState.dyeAlpha,uiState.dyeSize,uiState.dyeType);
-  };
-
-  // Reset button
-  document.getElementById('resetBtn').onclick = ()=>{resetDye();};
-
-  // Diffuse speed
-  let diffuseSpeed = document.getElementById('diffuseSpeed');
-  let diffuseSpeedVal = document.getElementById('diffuseSpeedVal');
-  diffuseSpeed.oninput = ()=>{uiState.diffuseSpeed = parseFloat(diffuseSpeed.value); diffuseSpeedVal.innerText = diffuseSpeed.value;}
-  diffuseSpeedVal.innerText = diffuseSpeed.value;
-
-  // Turbulence
-  let turbulence = document.getElementById('turbulence');
-  let turbulenceVal = document.getElementById('turbulenceVal');
-  turbulence.oninput = ()=>{uiState.turbulence = parseFloat(turbulence.value); turbulenceVal.innerText = turbulence.value;}
-  turbulenceVal.innerText = turbulence.value;
-
-  // Viscosity
-  let viscosity = document.getElementById('viscosity');
-  let viscosityVal = document.getElementById('viscosityVal');
-  viscosity.oninput = ()=>{uiState.viscosity = parseFloat(viscosity.value); viscosityVal.innerText = viscosity.value;}
-  viscosityVal.innerText = viscosity.value;
-
-  // Smear
-  let smear = document.getElementById('smear');
-  let smearVal = document.getElementById('smearVal');
-  smear.oninput = ()=>{uiState.smear = parseFloat(smear.value); smearVal.innerText = smear.value;}
-  smearVal.innerText = smear.value;
-
-  // BG hue
-  let bgHue = document.getElementById('bgHue');
-  let bgHueVal = document.getElementById('bgHueVal');
-  bgHue.oninput = ()=>{uiState.bgHue = parseInt(bgHue.value); bgHueVal.innerText = bgHue.value;}
-  bgHueVal.innerText = bgHue.value;
-
-  // BG brightness
-  let bgBright = document.getElementById('bgBright');
-  let bgBrightVal = document.getElementById('bgBrightVal');
-  bgBright.oninput = ()=>{uiState.bgBright = parseFloat(bgBright.value); bgBrightVal.innerText = bgBright.value;}
-  bgBrightVal.innerText = bgBright.value;
-}
-setupUI();
-
-/* --- Dye Dropper Logic --- */
-function addDyeDrop(x, y, color, alpha, size, type) {
-  dyeDrops.push({
-    x: x/SIM_SIZE,
-    y: y/SIM_SIZE,
-    color: color,
-    alpha: alpha,
-    size: size/SIM_SIZE,
-    type: type,
-    time: Date.now()
-  });
-  dyeMixColor[0] += color[0]; dyeMixColor[1] += color[1]; dyeMixColor[2] += color[2];
-  dyeMixCount++;
-  document.getElementById('info').innerText = `Dye drop added: ${color.map(c=>Math.round(c)).join(',')} (type: ${type})`;
-}
-
-/* --- Dye Simulation Shader (GLSL) --- */
-/* --- This fragment shader handles diffusion, mixing, stirring, and turbulence --- */
-const dyeFragmentShader = `#version 300 es
-precision highp float;
-uniform sampler2D dye;
-uniform float diffuseSpeed;
-uniform float turbulence;
-uniform float viscosity;
-uniform float smear;
-uniform vec2 resolution;
-uniform vec2 stirVec;
-out vec4 outColor;
+const fragmentShaderSrc = `
+precision mediump float;
+uniform vec2 u_resolution;
+uniform float u_time;
+uniform vec2 u_mouse;
+uniform float u_viscosity;
+uniform float u_diffusion;
+uniform float u_force;
+varying vec2 v_uv;
 
 float rand(vec2 co){
   return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
 }
+
 void main() {
-  vec2 uv = gl_FragCoord.xy / resolution;
-  vec4 color = texture(dye, uv);
+  vec2 uv = v_uv;
+  vec2 mouse = u_mouse / u_resolution;
+  float d = distance(uv, mouse);
+  float colorMix = smoothstep(0.1, 0.0, d);
+  float r = 0.5 + 0.5*sin(u_time + uv.x*5.0);
+  float g = 0.5 + 0.5*sin(u_time + uv.y*5.0 + 2.0);
+  float b = 0.5 + 0.5*sin(u_time + uv.x*5.0 + 4.0);
+  vec3 baseColor = vec3(r,g,b);
+  vec3 mixedColor = mix(baseColor, vec3(1.0,0.0,0.5), colorMix);
+  mixedColor *= 1.0 - d * 0.5;
+  gl_FragColor = vec4(mixedColor,1.0);
+}`;
 
-  // --- Diffusion: sample neighbors and blend ---
-  vec4 diffusion = vec4(0.0);
-  float wsum = 0.0;
-  float r = 1.0 / resolution.x;
-  for(int i=-2;i<=2;i++) {
-    for(int j=-2;j<=2;j++) {
-      float w = 1.0 - 0.18*float(abs(i)+abs(j));
-      diffusion += texture(dye, uv + vec2(i,j)*r) * w;
-      wsum += w;
-    }
-  }
-  diffusion /= wsum;
-  color = mix(color, diffusion, diffuseSpeed*0.018);
+const program = createProgram(gl, vertexShaderSrc, fragmentShaderSrc);
+const positionLoc = gl.getAttribLocation(program, 'a_position');
+const resolutionLoc = gl.getUniformLocation(program, 'u_resolution');
+const timeLoc = gl.getUniformLocation(program, 'u_time');
+const mouseLoc = gl.getUniformLocation(program, 'u_mouse');
+const viscosityLoc = gl.getUniformLocation(program, 'u_viscosity');
+const diffusionLoc = gl.getUniformLocation(program, 'u_diffusion');
+const forceLoc = gl.getUniformLocation(program, 'u_force');
 
-  // --- Turbulence: add random jitter ---
-  float turb = turbulence * (rand(uv+gl_FragCoord.xy*0.02) - 0.5);
-  uv += turb;
-  color.rgb = mix(color.rgb, texture(dye, clamp(uv,0.,1.)).rgb, turbulence*0.6);
+const buffer = gl.createBuffer();
+gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+  -1,-1,
+   1,-1,
+  -1, 1,
+  -1, 1,
+   1,-1,
+   1, 1
+]), gl.STATIC_DRAW);
 
-  // --- Stirring: apply motion vector ---
-  color.rgb = mix(color.rgb, texture(dye, clamp(uv+stirVec*viscosity*0.35,0.,1.)).rgb, clamp(length(stirVec)*0.11,0.,0.6));
+gl.useProgram(program);
+gl.enableVertexAttribArray(positionLoc);
+gl.vertexAttribPointer(positionLoc, 2, gl.FLOAT, false, 0, 0);
 
-  // --- Smear: gentle color blend for realism ---
-  color.rgb = mix(color.rgb, diffusion.rgb, smear*0.36);
-
-  // --- Fade out alpha for realism ---
-  color.a *= 0.999;
-
-  outColor = color;
-}
-`;
-
-/* --- Dye Drop Shader (GLSL) --- */
-/* --- This fragment shader applies dye drops to the simulation texture --- */
-const dyeDropShader = `#version 300 es
-precision highp float;
-uniform vec2 dropPos;
-uniform vec3 dyeColor;
-uniform float dropAlpha;
-uniform float dropSize;
-uniform int dropType;
-uniform vec2 resolution;
-out vec4 outColor;
-void main() {
-  vec2 uv = gl_FragCoord.xy / resolution;
-  float d = distance(uv, dropPos);
-  float alpha = 0.0;
-  if (dropType==0) { // circular
-    alpha = smoothstep(dropSize, 0.0, d);
-  } else if (dropType==1) { // splash
-    alpha = smoothstep(dropSize*1.2, dropSize*0.2, d) * (0.6+0.4*fract(sin(dot(uv,vec2(41.7,97.1)))*12345.6));
-  } else if (dropType==2) { // spray
-    alpha = smoothstep(dropSize*1.6, dropSize*0.05, d) * (0.3+0.7*fract(sin(dot(uv,vec2(19.1,71.3)))*65432.1));
-  } else if (dropType==3) { // ring
-    float ring = abs(d-dropSize*0.65);
-    alpha = smoothstep(dropSize*0.38, dropSize*0.08, ring);
-  }
-  alpha *= dropAlpha;
-  outColor = vec4(dyeColor, alpha);
-}
-`;
-
-/* --- Initialize Simulation Framebuffers --- */
-function createFramebuffer(size) {
-  let rt = new THREE.WebGLRenderTarget(size,size,{
-    format: THREE.RGBAFormat,
-    // FIX for compatibility: Switched from THREE.FloatType to THREE.HalfFloatType
-    type: THREE.HalfFloatType,
-    minFilter: THREE.LinearFilter,
-    magFilter: THREE.LinearFilter,
-    depthBuffer: false,
-    stencilBuffer: false
-  });
-  return rt;
-}
-dyeState = createFramebuffer(SIM_SIZE);
-dyeStateSwap = createFramebuffer(SIM_SIZE);
-
-/* --- Dye Simulation Mesh --- */
-let dyeMesh = new THREE.Mesh(
-  new THREE.PlaneGeometry(2,2),
-  new THREE.ShaderMaterial({
-    uniforms: {
-      dye: {value: dyeState.texture},
-      diffuseSpeed: {value: uiState.diffuseSpeed},
-      turbulence: {value: uiState.turbulence},
-      viscosity: {value: uiState.viscosity},
-      smear: {value: uiState.smear},
-      resolution: {value: new THREE.Vector2(SIM_SIZE,SIM_SIZE)},
-      stirVec: {value: new THREE.Vector2(0,0)}
-    },
-    fragmentShader: dyeFragmentShader,
-    vertexShader: `
-      varying vec2 vUv;
-      void main() { vUv = uv; gl_Position = vec4(position,1.0);}
-    `
-  })
-);
-
-/* --- Dye Dropper Mesh --- */
-let dyeDropMesh = new THREE.Mesh(
-  new THREE.PlaneGeometry(2,2),
-  new THREE.ShaderMaterial({
-    uniforms: {
-      dropPos: {value: new THREE.Vector2(0.5,0.5)},
-      dyeColor: {value: new THREE.Color(1,1,1)},
-      dropAlpha: {value: 0.7},
-      dropSize: {value: 0.06},
-      dropType: {value: 0},
-      resolution: {value: new THREE.Vector2(SIM_SIZE,SIM_SIZE)}
-    },
-    fragmentShader: dyeDropShader,
-    vertexShader: `
-      varying vec2 vUv;
-      void main() { vUv = uv; gl_Position = vec4(position,1.0);}
-    `
-  })
-);
-
-let dyeScene = new THREE.Scene();
-dyeScene.add(dyeMesh);
-
-let dyeDropScene = new THREE.Scene();
-dyeDropScene.add(dyeDropMesh);
-
-/* --- Simulation Update Loop --- */
-function updateDye() {
-  // 1. Apply dye drops (if any)
-  if (dyeDrops.length>0) {
-    dyeDrops.forEach(drop=>{
-      dyeDropMesh.material.uniforms.dropPos.value.set(drop.x,drop.y);
-      dyeDropMesh.material.uniforms.dyeColor.value.setRGB(drop.color[0]/255,drop.color[1]/255,drop.color[2]/255);
-      dyeDropMesh.material.uniforms.dropAlpha.value = drop.alpha;
-      dyeDropMesh.material.uniforms.dropSize.value = drop.size;
-      dyeDropMesh.material.uniforms.dropType.value = (
-        drop.type==='circular'?0:
-        drop.type==='splash'?1:
-        drop.type==='spray'?2:
-        drop.type==='ring'?3:0
-      );
-      // NOTE: Render dye drops to the *current* simulation state.
-      renderer.setRenderTarget(dyeState);
-      renderer.render(dyeDropScene, new THREE.Camera());
-    });
-    dyeDrops = [];
-  }
-
-  // 2. Update diffusion shader uniforms
-  // NOTE: This updates the shader with the texture from the *current* state.
-  dyeMesh.material.uniforms.dye.value = dyeState.texture;
-  dyeMesh.material.uniforms.diffuseSpeed.value = uiState.diffuseSpeed;
-  dyeMesh.material.uniforms.turbulence.value = uiState.turbulence;
-  dyeMesh.material.uniforms.viscosity.value = uiState.viscosity;
-  dyeMesh.material.uniforms.smear.value = uiState.smear;
-  dyeMesh.material.uniforms.stirVec.value.set(stirDX, stirDY);
-
-  // 3. Swap buffers: Run dye simulation shader to calculate the *next* state
-  renderer.setRenderTarget(dyeStateSwap);
-  renderer.render(dyeScene, new THREE.Camera());
-
-  // 4. Swap textures (next state becomes current state)
-  let tmp = dyeState;
-  dyeState = dyeStateSwap;
-  dyeStateSwap = tmp;
-
-  renderer.setRenderTarget(null); // Return to drawing on the screen
-}
-
-/* --- Draw Dye to Main Canvas --- */
-function drawDyeToCanvas() {
-  // Render dye texture as a full-screen quad with background
-  gl.viewport(0, 0, WIDTH, HEIGHT);
-  
-  // 1. Draw background
-  let bgRGB = hslToRgb(uiState.bgHue, 35, uiState.bgBright*100);
-  renderer.setClearColor(rgbToHex(...bgRGB), 1);
-  renderer.clear();
-
-  // 2. Draw dye simulation (using the current dyeState.texture)
-  dyeMesh.material.uniforms.dye.value = dyeState.texture;
-  renderer.render(dyeScene, new THREE.Camera());
-}
-
-/* --- Animation Loop --- */
-function animate() {
-  updateDye();
-  drawDyeToCanvas();
-  requestAnimationFrame(animate);
-}
-
-/* --- Initialization --- */
-resetDye(); // Initialize the framebuffers
-animate();
-
-/* --- Mouse/Touch Interactions --- */
-function getCanvasPos(e) {
-  let rect = renderer.domElement.getBoundingClientRect();
-  if(e.touches) {
-    return [
-      (e.touches[0].clientX-rect.left)/rect.width*SIM_SIZE,
-      (e.touches[0].clientY-rect.top)/rect.height*SIM_SIZE
-    ];
-  }
-  return [
-    (e.clientX-rect.left)/rect.width*SIM_SIZE,
-    (e.clientY-rect.top)/rect.height*SIM_SIZE
-  ];
-}
-
-renderer.domElement.addEventListener('mousedown', e=>{
-  mouseDown = true;
-  let [x,y] = getCanvasPos(e);
-  lastX = x; lastY = y;
-  dragPath = [[x,y]];
-  stirDX = 0; stirDY = 0;
-  touchActive = false;
-  document.getElementById('touchGuide').classList.remove('show');
-});
-renderer.domElement.addEventListener('mousemove', e=>{
-  if(mouseDown) {
-    let [x,y] = getCanvasPos(e);
-    stirDX = (x-lastX)/SIM_SIZE; stirDY = (y-lastY)/SIM_SIZE;
-    stirAmount = Math.sqrt(stirDX**2+stirDY**2);
-    dragPath.push([x,y]);
-    lastX = x; lastY = y;
-    // Mix dye along drag path
-    addDyeDrop(x,y,uiState.dyeColor,uiState.dyeAlpha*clamp(stirAmount*12,0.15,1),uiState.dyeSize,uiState.dyeType);
-  }
-});
-renderer.domElement.addEventListener('mouseup', e=>{
-  mouseDown = false;
-  stirDX = 0; stirDY = 0;
-  dragPath = [];
-});
-renderer.domElement.addEventListener('mouseleave', e=>{
-  mouseDown = false;
-  stirDX = 0; stirDY = 0;
-  dragPath = [];
+let mouseX = 0;
+let mouseY = 0;
+canvas.addEventListener('mousemove', e => {
+  mouseX = e.clientX;
+  mouseY = canvas.height - e.clientY;
 });
 
-// Touch
-renderer.domElement.addEventListener('touchstart', e=>{
-  let [x,y] = getCanvasPos(e);
-  mouseDown = false;
-  touchActive = true;
-  dragPath = [[x,y]];
-  lastX = x; lastY = y;
-  stirDX = 0; stirDY = 0;
-  document.getElementById('touchGuide').classList.add('show');
-});
-renderer.domElement.addEventListener('touchmove', e=>{
-  if(touchActive) {
-    let [x,y] = getCanvasPos(e);
-    stirDX = (x-lastX)/SIM_SIZE; stirDY = (y-lastY)/SIM_SIZE;
-    stirAmount = Math.sqrt(stirDX**2+stirDY**2);
-    dragPath.push([x,y]);
-    lastX = x; lastY = y;
-    addDyeDrop(x,y,uiState.dyeColor,uiState.dyeAlpha*clamp(stirAmount*13,0.16,1),uiState.dyeSize,uiState.dyeType);
-  }
-});
-renderer.domElement.addEventListener('touchend', e=>{
-  touchActive = false;
-  stirDX = 0; stirDY = 0;
-  dragPath = [];
-  setTimeout(()=>{document.getElementById('touchGuide').classList.remove('show');},800);
-});
-
-/* --- Reset Dye Simulation --- */
-function resetDye() {
-  // Fill dye texture with transparent
-  renderer.setRenderTarget(dyeState);
-  renderer.setClearColor(0x000000, 0); // Clear with transparent black
-  renderer.clear();
-  renderer.setRenderTarget(dyeStateSwap);
-  renderer.setClearColor(0x000000, 0); // Clear with transparent black
-  renderer.clear();
-  renderer.setRenderTarget(null); // Return to drawing on the screen
-
-  dyeDrops = [];
-  dyeMixColor = [0,0,0];
-  dyeMixCount = 0;
-  document.getElementById('info').innerText = "Reset dye simulation.";
+function render(time) {
+  gl.uniform2f(resolutionLoc, canvas.width, canvas.height);
+  gl.uniform1f(timeLoc, time * 0.001);
+  gl.uniform2f(mouseLoc, mouseX, mouseY);
+  gl.uniform1f(viscosityLoc, parseFloat(document.getElementById('viscosity').value));
+  gl.uniform1f(diffusionLoc, parseFloat(document.getElementById('diffusion').value));
+  gl.uniform1f(forceLoc, parseFloat(document.getElementById('force').value));
+  gl.drawArrays(gl.TRIANGLES, 0, 6);
+  requestAnimationFrame(render);
 }
-
-/* --- Resize Handling --- */
-window.addEventListener('resize', ()=>{
-  let W = Math.min(window.innerWidth, 1024);
-  let H = Math.min(window.innerHeight, 630);
-  renderer.setSize(W,H);
-});
-
-/* --- Info Panel Updates --- */
-setInterval(()=>{
-  let avgMix = dyeMixCount?dyeMixColor.map(c=>Math.round(c/dyeMixCount)):[0,0,0];
-  let mixHex = rgbToHex(avgMix[0],avgMix[1],avgMix[2]);
-  document.getElementById('info').innerHTML =
-    `Total dye drops: <b>${dyeMixCount}</b><br>
-    Current dye: <span style="color:${mixHex};background:#fff2;padding:2px 7px;border-radius:8px;">${mixHex}</span>`;
-}, 650);
-
-/* --- End of Dye Mixing Lab --- */
-  </script>
+requestAnimationFrame(render);
+</script>
 </body>
 </html>

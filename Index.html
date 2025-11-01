@@ -2,9 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Real-time reflective sphere over 3D street</title>
+  <title>Real-time reflective sphere over 3D street (Self-contained)</title>
   <style>
-    body { margin: 0; overflow: hidden; background: #000; }
+    body { margin: 0; overflow: hidden; background: #222; }
     canvas { display: block; }
     #ui {
       position: absolute;
@@ -39,9 +39,9 @@
     </div>
   </div>
 
+  <!-- three.js core and controls from CDN -->
   <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/controls/OrbitControls.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/loaders/RGBELoader.js"></script>
 
   <script>
     // Renderer
@@ -55,6 +55,16 @@
 
     // Scene & camera
     const scene = new THREE.Scene();
+    // Self-contained background gradient using a large vertical plane
+    const bgGeo = new THREE.PlaneGeometry(100, 100);
+    const bgMat = new THREE.MeshBasicMaterial({ 
+      color: 0x2a3550,
+      side: THREE.BackSide
+    });
+    const bgMesh = new THREE.Mesh(bgGeo, bgMat);
+    bgMesh.position.set(0, 50, 0);
+    scene.add(bgMesh);
+
     const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 500);
     camera.position.set(5, 3, 8);
 
@@ -63,21 +73,12 @@
     controls.enableDamping = true;
     controls.target.set(0, 1, 0);
 
-    // Environment (HDR for lighting)
-    const rgbeLoader = new THREE.RGBELoader();
-    rgbeLoader.setPath('https://threejs.org/examples/textures/equirectangular/');
-    rgbeLoader.load('royal_esplanade_1k.hdr', (hdr) => {
-      hdr.mapping = THREE.EquirectangularReflectionMapping;
-      scene.environment = hdr;
-      scene.background = hdr;
-    });
-
-    // Lights
-    const hemi = new THREE.HemisphereLight(0xffffff, 0x444466, 0.6);
+    // Lights (no external HDR)
+    const hemi = new THREE.HemisphereLight(0xcdefff, 0x444466, 0.5);
     hemi.position.set(0, 30, 0);
     scene.add(hemi);
 
-    const sun = new THREE.DirectionalLight(0xffffff, 1.2);
+    const sun = new THREE.DirectionalLight(0xffffff, 1.4);
     sun.position.set(10, 15, 5);
     sun.castShadow = true;
     sun.shadow.mapSize.set(1024, 1024);

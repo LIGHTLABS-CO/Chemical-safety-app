@@ -236,8 +236,8 @@ document.body.appendChild(renderer.domElement);
 let gl = renderer.getContext();
 
 /* --- Dye Simulation State --- */
-// Downgraded: Reduced simulation resolution for performance
-const SIM_SIZE = 256; // simulation resolution
+// Optimized for broader compatibility (was 512)
+const SIM_SIZE = 256; 
 let dyeState = null; // simulation framebuffer
 let dyeStateSwap = null; // swap buffer
 
@@ -449,8 +449,8 @@ void main() {
 function createFramebuffer(size) {
   let rt = new THREE.WebGLRenderTarget(size,size,{
     format: THREE.RGBAFormat,
-    // Downgraded: Using HalfFloatType (16-bit float) for better hardware compatibility
-    type: THREE.HalfFloatType, 
+    // FIX for compatibility: Switched from THREE.FloatType to THREE.HalfFloatType
+    type: THREE.HalfFloatType,
     minFilter: THREE.LinearFilter,
     magFilter: THREE.LinearFilter,
     depthBuffer: false,
@@ -562,12 +562,8 @@ function drawDyeToCanvas() {
   renderer.clear();
 
   // 2. Draw dye simulation (using the current dyeState.texture)
-  // We need to re-set the texture on the mesh for the main render pass.
   dyeMesh.material.uniforms.dye.value = dyeState.texture;
   renderer.render(dyeScene, new THREE.Camera());
-
-  // NOTE: Removed the flawed renderer.copyTextureToTexture logic, as the
-  // dyeMesh uses the dyeState.texture and can be rendered directly to the screen.
 }
 
 /* --- Animation Loop --- */

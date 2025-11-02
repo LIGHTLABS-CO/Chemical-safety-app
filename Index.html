@@ -1,16 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dye Mixing Simulator</title>
 <style>
   html, body {
-    height: 100%;
     margin: 0;
+    padding: 0;
     overflow: hidden;
-    background: radial-gradient(circle at center, #fafafa, #e0e0e0);
+    height: 100%;
+    background: radial-gradient(circle at center, #fafafa, #ccc);
     font-family: sans-serif;
+    user-select: none;
   }
 
   canvas {
@@ -20,6 +22,34 @@
     display: block;
   }
 
+  .controls {
+    position: absolute;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(255,255,255,0.8);
+    border-radius: 12px;
+    padding: 10px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 90%;
+    max-width: 400px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+  }
+
+  label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 14px;
+    color: #333;
+  }
+
+  input[type="range"] {
+    width: 100%;
+    accent-color: #2196f3;
+  }
+
   .label {
     position: absolute;
     top: 10px;
@@ -27,107 +57,141 @@
     text-align: center;
     font-size: 1.2em;
     color: #333;
-    user-select: none;
   }
 </style>
 </head>
 <body>
-<div class="label">🌀 Swipe and mix the dyes</div>
+<div class="label">🫧 Swipe and mix the dyes</div>
 <canvas id="mixCanvas"></canvas>
+
+<div class="controls">
+  <label>🧴 Viscosity <span id="viscVal">0.8</span></label>
+  <input id="viscosity" type="range" min="0.1" max="1" step="0.05" value="0.8">
+  
+  <label>💧 Liquidity <span id="liqVal">0.5</span></label>
+  <input id="liquidity" type="range" min="0.1" max="1" step="0.05" value="0.5">
+</div>
 
 <script>
 const canvas = document.getElementById("mixCanvas");
 const ctx = canvas.getContext("2d");
+const viscSlider = document.getElementById("viscosity");
+const liqSlider = document.getElementById("liquidity");
+const viscVal = document.getElementById("viscVal");
+const liqVal = document.getElementById("liqVal");
+
+let viscosity = parseFloat(viscSlider.value);
+let liquidity = parseFloat(liqSlider.value);
 
 function resizeCanvas() {
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
 }
-window.addEventListener("resize", resizeCanvas);
 resizeCanvas();
+window.addEventListener("resize", resizeCanvas);
 
-// Dye objects
+// Dye bubbles
 const dyes = [
-  { x: canvas.width * 0.3, y: canvas.height * 0.5, r: 80, color: "#ff0066", vx: 0, vy: 0 },
-  { x: canvas.width * 0.7, y: canvas.height * 0.5, r: 80, color: "#0066ff", vx: 0, vy: 0 }
+  { x: canvas.width * 0.3, y: canvas.height * 0.5, vx: 0, vy: 0, color: "#ff4081", radius: 100 },
+  { x: canvas.width * 0.7, y: canvas.height * 0.5, vx: 0, vy: 0, color: "#3f51b5", radius: 100 },
 ];
 
-let activeDye = null;
-
 function hexToRgb(hex) {
-  const bigint = parseInt(hex.replace("#", ""), 16);
-  return { r: (bigint >> 16) & 255, g: (bigint >> 8) & 255, b: bigint & 255 };
+  const bigint = parseInt(hex.replace("#",""), 16);
+  return {r:(bigint>>16)&255, g:(bigint>>8)&255, b:bigint&255};
 }
 
-function rgbToHex(r, g, b) {
-  return "#" + [r, g, b].map(x => x.toString(16).padStart(2, "0")).join("");
+function blend(c1, c2, t) {
+  const a = hexToRgb(c1);
+  const b = hexToRgb(c2);
+  const r = Math.round(a.r*(1-t) + b.r*t);
+  const g = Math.round(a.g*(1-t) + b.g*t);
+  const bl = Math.round(a.b*(1-t) + b.b*t);
+  return `rgb(${r},${g},${bl})`;
 }
 
-function blend(c1, c2, factor) {
-  const rgb1 = hexToRgb(c1);
-  const rgb2 = hexToRgb(c2);
-  const r = Math.round(rgb1.r * (1 - factor) + rgb2.r * factor);
-  const g = Math.round(rgb1.g * (1 - factor) + rgb2.g * factor);
-  const b = Math.round(rgb1.b * (1 - factor) + rgb2.b * factor);
-  return rgbToHex(r, g, b);
+function dist(a,b) {
+  return Math.hypot(a.x-b.x, a.y-b.y);
 }
 
-function distance(a, b) {
-  const dx = a.x - b.x;
-  const dy = a.y - b.y;
-  return Math.sqrt(dx*dx + dy*dy);
+let active = null;
+
+function getTouchPos(e) {
+  const t = e.touches ? e.touches[0] : e;
+  return {x: t.clientX, y: t.clientY};
 }
 
-function draw() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  // Draw background smooth gradient based on dye positions
-  const mixFactor = Math.max(0, 1 - distance(dyes[0], dyes[1]) / 300);
-  const bgColor = blend(dyes[0].color, dyes[1].color, mixFactor);
-  document.body.style.background = `radial-gradient(circle at center, ${bgColor}, #222)`;
-
-  dyes.forEach(dye => {
-    const gradient = ctx.createRadialGradient(dye.x, dye.y, 10, dye.x, dye.y, dye.r);
-    gradient.addColorStop(0, dye.color);
-    gradient.addColorStop(1, "rgba(255,255,255,0)");
-    ctx.fillStyle = gradient;
-    ctx.beginPath();
-    ctx.arc(dye.x, dye.y, dye.r, 0, Math.PI * 2);
-    ctx.fill();
-  });
-
-  requestAnimationFrame(draw);
-}
-
-draw();
-
-function getTouchPos(evt) {
-  const t = evt.touches ? evt.touches[0] : evt;
-  return { x: t.clientX, y: t.clientY };
-}
-
-canvas.addEventListener("touchstart", startDrag, { passive: true });
-canvas.addEventListener("touchmove", moveDrag, { passive: true });
-canvas.addEventListener("touchend", endDrag, { passive: true });
 canvas.addEventListener("mousedown", startDrag);
-canvas.addEventListener("mousemove", moveDrag);
+canvas.addEventListener("mousemove", drag);
 canvas.addEventListener("mouseup", endDrag);
+canvas.addEventListener("touchstart", startDrag, {passive:true});
+canvas.addEventListener("touchmove", drag, {passive:true});
+canvas.addEventListener("touchend", endDrag);
 
-function startDrag(e) {
+function startDrag(e){
   const pos = getTouchPos(e);
-  activeDye = dyes.find(d => distance(d, pos) < d.r);
+  active = dyes.find(d=>dist(d,pos)<d.radius);
 }
 
-function moveDrag(e) {
-  if (!activeDye) return;
+function drag(e){
+  if(!active) return;
   const pos = getTouchPos(e);
-  activeDye.x = pos.x;
-  activeDye.y = pos.y;
+  active.vx += (pos.x - active.x) * 0.1;
+  active.vy += (pos.y - active.y) * 0.1;
 }
 
-function endDrag() {
-  activeDye = null;
+function endDrag(){ active = null; }
+
+function updatePhysics(){
+  dyes.forEach(d=>{
+    d.vx *= viscosity;
+    d.vy *= viscosity;
+    d.x += d.vx;
+    d.y += d.vy;
+    // bounce off walls gently
+    if(d.x < d.radius || d.x > canvas.width - d.radius){
+      d.vx *= -liquidity;
+      d.x = Math.max(d.radius, Math.min(canvas.width - d.radius, d.x));
+    }
+    if(d.y < d.radius || d.y > canvas.height - d.radius){
+      d.vy *= -liquidity;
+      d.y = Math.max(d.radius, Math.min(canvas.height - d.radius, d.y));
+    }
+  });
+  // merge-like effect
+  const d = dist(dyes[0], dyes[1]);
+  const mixFactor = Math.max(0, 1 - d / 250);
+  const bg = blend(dyes[0].color, dyes[1].color, mixFactor);
+  document.body.style.background = `radial-gradient(circle at center, ${bg}, #111)`;
 }
+
+function drawBlob(d){
+  const grad = ctx.createRadialGradient(d.x, d.y, 10, d.x, d.y, d.radius);
+  grad.addColorStop(0, d.color);
+  grad.addColorStop(1, "rgba(255,255,255,0)");
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.arc(d.x, d.y, d.radius, 0, Math.PI*2);
+  ctx.fill();
+}
+
+function animate(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  updatePhysics();
+  dyes.forEach(drawBlob);
+  requestAnimationFrame(animate);
+}
+animate();
+
+// Slider events
+viscSlider.oninput = () => {
+  viscosity = parseFloat(viscSlider.value);
+  viscVal.textContent = viscosity.toFixed(2);
+};
+liqSlider.oninput = () => {
+  liquidity = parseFloat(liqSlider.value);
+  liqVal.textContent = liquidity.toFixed(2);
+};
 </script>
 </body>
 </html>

@@ -1,53 +1,151 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dye Mixing Simulator</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f0f0f0;
-        }
-        
-        .mixer {
-            width: 400px;
-            margin: 40px auto;
-            background-color: #fff;
-            padding: 20px;
-            border: 1px solid #ddd;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        }
-        
-        .color-picker {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 20px;
-        }
-        
-        .color-picker select {
-            width: 45%;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-        }
-        
-        .slider-container {
-            margin-bottom: 20px;
-        }
-        
-        .slider-container label {
-            display: block;
-            margin-bottom: 10px;
-        }
-        
-        .result {
-            margin-top: 20px;
-            padding: 20px;
-            border: 1px solid #ddd;
-            border-radius: 10px;
-            background-color: #fff;
-        }
-        
-        .
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dye Mixing Simulator</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f0f0f0;
+    }
+
+    .mixer {
+      width: 800px;
+      margin: 40px auto;
+      background-color: #fff;
+      padding: 20px;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .color-picker {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    .color-picker select {
+      width: 45%;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      font-size: 16px;
+    }
+
+    .result {
+      width: 100px;
+      height: 100px;
+      border: 1px solid #ccc;
+      margin: 20px auto;
+      border-radius: 10px;
+    }
+
+    button {
+      display: block;
+      margin: 0 auto;
+      padding: 10px 20px;
+      background-color: #007bff;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    .colors {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+    }
+
+    .color {
+      width: 50px;
+      height: 50px;
+      border: 1px solid #aaa;
+      border-radius: 5px;
+      margin: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="mixer">
+    <h2 style="text-align: center;">🎨 Dye Mixing Simulator</h2>
+
+    <div class="color-picker">
+      <select id="color1">
+        <option value="#ff0000">Red</option>
+        <option value="#00ff00">Green</option>
+        <option value="#0000ff">Blue</option>
+        <option value="#ffff00">Yellow</option>
+        <option value="#ff00ff">Magenta</option>
+        <option value="#00ffff">Cyan</option>
+        <option value="#000000">Black</option>
+        <option value="#ffffff">White</option>
+      </select>
+
+      <select id="color2">
+        <option value="#ff0000">Red</option>
+        <option value="#00ff00">Green</option>
+        <option value="#0000ff">Blue</option>
+        <option value="#ffff00">Yellow</option>
+        <option value="#ff00ff">Magenta</option>
+        <option value="#00ffff">Cyan</option>
+        <option value="#000000">Black</option>
+        <option value="#ffffff">White</option>
+      </select>
+    </div>
+
+    <button onclick="mixColors()">Mix Colors</button>
+
+    <div class="result" id="result"></div>
+  </div>
+
+  <script>
+    function mixColors() {
+      const color1 = document.getElementById("color1").value;
+      const color2 = document.getElementById("color2").value;
+
+      const mixedColor = blendColors(color1, color2);
+      document.getElementById("result").style.backgroundColor = mixedColor;
+    }
+
+    function blendColors(c1, c2) {
+      const rgb1 = hexToRgb(c1);
+      const rgb2 = hexToRgb(c2);
+
+      const r = Math.round((rgb1.r + rgb2.r) / 2);
+      const g = Math.round((rgb1.g + rgb2.g) / 2);
+      const b = Math.round((rgb1.b + rgb2.b) / 2);
+
+      return rgbToHex(r, g, b);
+    }
+
+    function hexToRgb(hex) {
+      hex = hex.replace("#", "");
+      const bigint = parseInt(hex, 16);
+      const r = (bigint >> 16) & 255;
+      const g = (bigint >> 8) & 255;
+      const b = bigint & 255;
+      return { r, g, b };
+    }
+
+    function rgbToHex(r, g, b) {
+      return (
+        "#" +
+        [r, g, b]
+          .map((x) => {
+            const hex = x.toString(16);
+            return hex.length === 1 ? "0" + hex : hex;
+          })
+          .join("")
+      );
+    }
+  </script>
+</body>
+</html>

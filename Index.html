@@ -1,151 +1,133 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Dye Mixing Simulator</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #f0f0f0;
-    }
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Dye Mixing Simulator</title>
+<style>
+  html, body {
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+    background: radial-gradient(circle at center, #fafafa, #e0e0e0);
+    font-family: sans-serif;
+  }
 
-    .mixer {
-      width: 800px;
-      margin: 40px auto;
-      background-color: #fff;
-      padding: 20px;
-      border: 1px solid #ddd;
-      border-radius: 10px;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-    }
+  canvas {
+    width: 100%;
+    height: 100%;
+    touch-action: none;
+    display: block;
+  }
 
-    .color-picker {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 20px;
-    }
-
-    .color-picker select {
-      width: 45%;
-      padding: 10px;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-      font-size: 16px;
-    }
-
-    .result {
-      width: 100px;
-      height: 100px;
-      border: 1px solid #ccc;
-      margin: 20px auto;
-      border-radius: 10px;
-    }
-
-    button {
-      display: block;
-      margin: 0 auto;
-      padding: 10px 20px;
-      background-color: #007bff;
-      color: #fff;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      font-size: 16px;
-    }
-
-    button:hover {
-      background-color: #0056b3;
-    }
-
-    .colors {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: space-between;
-    }
-
-    .color {
-      width: 50px;
-      height: 50px;
-      border: 1px solid #aaa;
-      border-radius: 5px;
-      margin: 5px;
-    }
-  </style>
+  .label {
+    position: absolute;
+    top: 10px;
+    width: 100%;
+    text-align: center;
+    font-size: 1.2em;
+    color: #333;
+    user-select: none;
+  }
+</style>
 </head>
 <body>
-  <div class="mixer">
-    <h2 style="text-align: center;">🎨 Dye Mixing Simulator</h2>
+<div class="label">🌀 Swipe and mix the dyes</div>
+<canvas id="mixCanvas"></canvas>
 
-    <div class="color-picker">
-      <select id="color1">
-        <option value="#ff0000">Red</option>
-        <option value="#00ff00">Green</option>
-        <option value="#0000ff">Blue</option>
-        <option value="#ffff00">Yellow</option>
-        <option value="#ff00ff">Magenta</option>
-        <option value="#00ffff">Cyan</option>
-        <option value="#000000">Black</option>
-        <option value="#ffffff">White</option>
-      </select>
+<script>
+const canvas = document.getElementById("mixCanvas");
+const ctx = canvas.getContext("2d");
 
-      <select id="color2">
-        <option value="#ff0000">Red</option>
-        <option value="#00ff00">Green</option>
-        <option value="#0000ff">Blue</option>
-        <option value="#ffff00">Yellow</option>
-        <option value="#ff00ff">Magenta</option>
-        <option value="#00ffff">Cyan</option>
-        <option value="#000000">Black</option>
-        <option value="#ffffff">White</option>
-      </select>
-    </div>
+function resizeCanvas() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+window.addEventListener("resize", resizeCanvas);
+resizeCanvas();
 
-    <button onclick="mixColors()">Mix Colors</button>
+// Dye objects
+const dyes = [
+  { x: canvas.width * 0.3, y: canvas.height * 0.5, r: 80, color: "#ff0066", vx: 0, vy: 0 },
+  { x: canvas.width * 0.7, y: canvas.height * 0.5, r: 80, color: "#0066ff", vx: 0, vy: 0 }
+];
 
-    <div class="result" id="result"></div>
-  </div>
+let activeDye = null;
 
-  <script>
-    function mixColors() {
-      const color1 = document.getElementById("color1").value;
-      const color2 = document.getElementById("color2").value;
+function hexToRgb(hex) {
+  const bigint = parseInt(hex.replace("#", ""), 16);
+  return { r: (bigint >> 16) & 255, g: (bigint >> 8) & 255, b: bigint & 255 };
+}
 
-      const mixedColor = blendColors(color1, color2);
-      document.getElementById("result").style.backgroundColor = mixedColor;
-    }
+function rgbToHex(r, g, b) {
+  return "#" + [r, g, b].map(x => x.toString(16).padStart(2, "0")).join("");
+}
 
-    function blendColors(c1, c2) {
-      const rgb1 = hexToRgb(c1);
-      const rgb2 = hexToRgb(c2);
+function blend(c1, c2, factor) {
+  const rgb1 = hexToRgb(c1);
+  const rgb2 = hexToRgb(c2);
+  const r = Math.round(rgb1.r * (1 - factor) + rgb2.r * factor);
+  const g = Math.round(rgb1.g * (1 - factor) + rgb2.g * factor);
+  const b = Math.round(rgb1.b * (1 - factor) + rgb2.b * factor);
+  return rgbToHex(r, g, b);
+}
 
-      const r = Math.round((rgb1.r + rgb2.r) / 2);
-      const g = Math.round((rgb1.g + rgb2.g) / 2);
-      const b = Math.round((rgb1.b + rgb2.b) / 2);
+function distance(a, b) {
+  const dx = a.x - b.x;
+  const dy = a.y - b.y;
+  return Math.sqrt(dx*dx + dy*dy);
+}
 
-      return rgbToHex(r, g, b);
-    }
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    function hexToRgb(hex) {
-      hex = hex.replace("#", "");
-      const bigint = parseInt(hex, 16);
-      const r = (bigint >> 16) & 255;
-      const g = (bigint >> 8) & 255;
-      const b = bigint & 255;
-      return { r, g, b };
-    }
+  // Draw background smooth gradient based on dye positions
+  const mixFactor = Math.max(0, 1 - distance(dyes[0], dyes[1]) / 300);
+  const bgColor = blend(dyes[0].color, dyes[1].color, mixFactor);
+  document.body.style.background = `radial-gradient(circle at center, ${bgColor}, #222)`;
 
-    function rgbToHex(r, g, b) {
-      return (
-        "#" +
-        [r, g, b]
-          .map((x) => {
-            const hex = x.toString(16);
-            return hex.length === 1 ? "0" + hex : hex;
-          })
-          .join("")
-      );
-    }
-  </script>
+  dyes.forEach(dye => {
+    const gradient = ctx.createRadialGradient(dye.x, dye.y, 10, dye.x, dye.y, dye.r);
+    gradient.addColorStop(0, dye.color);
+    gradient.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(dye.x, dye.y, dye.r, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  requestAnimationFrame(draw);
+}
+
+draw();
+
+function getTouchPos(evt) {
+  const t = evt.touches ? evt.touches[0] : evt;
+  return { x: t.clientX, y: t.clientY };
+}
+
+canvas.addEventListener("touchstart", startDrag, { passive: true });
+canvas.addEventListener("touchmove", moveDrag, { passive: true });
+canvas.addEventListener("touchend", endDrag, { passive: true });
+canvas.addEventListener("mousedown", startDrag);
+canvas.addEventListener("mousemove", moveDrag);
+canvas.addEventListener("mouseup", endDrag);
+
+function startDrag(e) {
+  const pos = getTouchPos(e);
+  activeDye = dyes.find(d => distance(d, pos) < d.r);
+}
+
+function moveDrag(e) {
+  if (!activeDye) return;
+  const pos = getTouchPos(e);
+  activeDye.x = pos.x;
+  activeDye.y = pos.y;
+}
+
+function endDrag() {
+  activeDye = null;
+}
+</script>
 </body>
 </html>

@@ -1,364 +1,53 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <title>Procedural 3D Human (OrbitControls robust)</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <style>
-    html,body { height:100%; margin:0; }
-    #app { width:100vw; height:100vh; display:block; background:#e9eef5; position:relative; }
-    .hint {
-      position: absolute;
-      left: 12px;
-      top: 12px;
-      background: rgba(255,255,255,0.95);
-      padding:8px 10px;
-      border-radius:6px;
-      font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial;
-      color:#222;
-      box-shadow:0 6px 18px rgba(0,0,0,0.08);
-      z-index: 5;
-      user-select: none;
-    }
-    .error {
-      position: absolute;
-      left: 50%;
-      top: 50%;
-      transform: translate(-50%, -50%);
-      background: rgba(255,240,240,0.98);
-      color: #8b0000;
-      padding: 16px 20px;
-      border-radius: 8px;
-      font-family: system-ui,Segoe UI,Roboto,Helvetica,Arial;
-      box-shadow: 0 6px 18px rgba(0,0,0,0.12);
-      z-index: 10;
-      max-width: 86vw;
-      text-align: center;
-      display: none;
-    }
-    .console {
-      position: absolute;
-      left: 12px;
-      bottom: 12px;
-      background: rgba(0,0,0,0.7);
-      color: #e6e6e6;
-      padding:8px 10px;
-      border-radius:6px;
-      font-family: monospace;
-      font-size: 12px;
-      z-index: 5;
-      max-width: calc(100vw - 24px);
-      max-height: 30vh;
-      overflow: auto;
-      white-space: pre-wrap;
-    }
-  </style>
-</head>
-<body>
-  <div id="app"></div>
-  <div class="hint">Drag to rotate • Scroll to zoom • Right-drag to pan</div>
-  <div id="error" class="error" role="alert" aria-hidden="true"></div>
-  <pre id="log" class="console" aria-hidden="false"></pre>
-
-  <!-- Three.js core -->
-  <script src="https://cdn.jsdelivr.net/npm/three@0.153.0/build/three.min.js"></script>
-  <!-- OrbitControls script (adjust URL to test other builds) -->
-  <script src="https://cdn.jsdelivr.net/npm/three@0.153.0/examples/js/controls/OrbitControls.js"></script>
-
-  <script>
-    // lightweight logger to on-screen console + browser console
-    const logEl = document.getElementById('log');
-    function log(...args){
-      console.log(...args);
-      const line = args.map(a => {
-        if (a === null) return 'null';
-        if (a === undefined) return 'undefined';
-        try { return (typeof a === 'object') ? JSON.stringify(a) : String(a); }
-        catch(e){ return String(a); }
-      }).join(' ');
-      logEl.textContent += line + '\n';
-      logEl.scrollTop = logEl.scrollHeight;
-    }
-
-    function showError(message, details){
-      const el = document.getElementById('error');
-      el.style.display = 'block';
-      el.setAttribute('aria-hidden', 'false');
-      el.innerHTML = '<strong>Controls failed to initialize</strong><div style="margin-top:8px">'+escapeHtml(message||'Unknown error')+'</div>' +
-                     (details ? ('<pre style="text-align:left;margin-top:8px;background:#fff;padding:8px;border-radius:4px;max-height:180px;overflow:auto;">'+escapeHtml(details)+'</pre>') : '');
-      log('ERROR:', message, details || '');
-    }
-    function hideError(){
-      const el = document.getElementById('error');
-      el.style.display = 'none';
-      el.setAttribute('aria-hidden', 'true');
-    }
-    function escapeHtml(s){
-      if(!s) return '';
-      return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-    }
-
-    // Resolve OrbitControls across builds but only report non-empty, meaningful tried list.
-    function resolveOrbitControls(){
-      const tried = [];
-      function record(name, val){
-        tried.push({ name, found: !!val });
-        return val;
-      }
-
-      const candidates = [
-        { name: 'THREE.OrbitControls.OrbitControls', fn: () => (window.THREE && window.THREE.OrbitControls && window.THREE.OrbitControls.OrbitControls) ? window.THREE.OrbitControls.OrbitControls : null },
-        { name: 'THREE.OrbitControls', fn: () => (window.THREE && window.THREE.OrbitControls) ? window.THREE.OrbitControls : null },
-        { name: 'window.OrbitControls', fn: () => (window && window.OrbitControls) ? window.OrbitControls : null },
-        { name: 'THREE.OrbitControls (alt)', fn: () => (THREE && THREE.OrbitControls) ? THREE.OrbitControls : null },
-        { name: 'window.THREE.OrbitControls', fn: () => (window.THREE && window.THREE.OrbitControls) ? window.THREE.OrbitControls : null }
-      ];
-
-      for(const c of candidates){
-        try{
-          const ctor = c.fn();
-          record(c.name, ctor);
-          if(typeof ctor === 'function') return { ctor, tried };
-          if(ctor && typeof ctor === 'object'){
-            // look for first function-valued key (common in some wrapped exports)
-            const key = Object.keys(ctor).find(k => typeof ctor[k] === 'function');
-            if(key){
-              record(c.name + '.' + key, ctor[key]);
-              return { ctor: ctor[key], tried };
-            }
-          }
-        }catch(e){
-          record(c.name + ' (error)', e.message || String(e));
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dye Mixing Simulator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
         }
-      }
-      return { ctor: null, tried };
-    }
-
-    (function main(){
-      log('Three.js version:', (THREE && (THREE.REVISION || THREE.VERSION)) || 'unknown');
-
-      const container = document.getElementById('app');
-      const scene = new THREE.Scene();
-      scene.background = new THREE.Color(0xe9eef5);
-
-      const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 100);
-      camera.position.set(0, 1.8, 5);
-
-      const renderer = new THREE.WebGLRenderer({ antialias: true });
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-      renderer.setSize(container.clientWidth, container.clientHeight);
-      renderer.outputEncoding = THREE.sRGBEncoding || THREE.LinearEncoding;
-      renderer.shadowMap.enabled = true;
-      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-      container.appendChild(renderer.domElement);
-
-      // lights + ground
-      const ambient = new THREE.AmbientLight(0xffffff, 0.45);
-      scene.add(ambient);
-      const key = new THREE.DirectionalLight(0xffffff, 0.9);
-      key.position.set(5, 8, 4); key.castShadow = true;
-      key.shadow.camera.near = 0.5; key.shadow.camera.far = 20;
-      key.shadow.mapSize.set(2048,2048); scene.add(key);
-      const fill = new THREE.DirectionalLight(0xffffff, 0.35); fill.position.set(-5,3,-4); scene.add(fill);
-      const groundMat = new THREE.MeshStandardMaterial({ color: 0xf3f5f8, roughness: 1 });
-      const ground = new THREE.Mesh(new THREE.PlaneGeometry(40,40), groundMat);
-      ground.rotation.x = -Math.PI/2; ground.position.y = -0.6; ground.receiveShadow = true;
-      scene.add(ground);
-
-      // materials and helper
-      const skin = new THREE.MeshStandardMaterial({ color: 0xffd6b3, roughness: 0.6, metalness: 0 });
-      const cloth = new THREE.MeshStandardMaterial({ color: 0x3b82c4, roughness: 0.7 });
-      const pants = new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.8 });
-      const shoe = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.4 });
-
-      function pivotedMesh(geometry, material, pivotOffset = new THREE.Vector3(0,0,0)){
-        const mesh = new THREE.Mesh(geometry, material);
-        const group = new THREE.Group();
-        mesh.position.copy(pivotOffset);
-        group.add(mesh);
-        return { group, mesh };
-      }
-
-      // build human (same as before)
-      const human = new THREE.Group();
-      const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.45,0.5,1.1,32), cloth); torso.castShadow=true; torso.position.set(0,1.15,0); human.add(torso);
-      const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.16,0.16,0.18,16), skin); neck.position.set(0,1.7,0); neck.castShadow=true; human.add(neck);
-      const head = new THREE.Mesh(new THREE.SphereGeometry(0.34,32,32), skin); head.position.set(0,2.12,0); head.castShadow=true; human.add(head);
-      const eyeMat = new THREE.MeshBasicMaterial({ color: 0x111111 }); const eyeGeo = new THREE.SphereGeometry(0.03,8,8);
-      const leftEye = new THREE.Mesh(eyeGeo, eyeMat); leftEye.position.set(-0.09,2.16,0.31);
-      const rightEye = new THREE.Mesh(eyeGeo, eyeMat); rightEye.position.set(0.09,2.16,0.31);
-      human.add(leftEye, rightEye);
-
-      const upperArmGeo = new THREE.CylinderGeometry(0.12,0.12,0.62,20);
-      const lowerArmGeo = new THREE.CylinderGeometry(0.11,0.11,0.6,16);
-
-      const leftUpper = pivotedMesh(upperArmGeo, cloth, new THREE.Vector3(0,-0.31,0));
-      leftUpper.group.position.set(-0.68,1.55,0); leftUpper.group.rotation.z = Math.PI/12; leftUpper.mesh.castShadow=true;
-      const leftLower = pivotedMesh(lowerArmGeo, skin, new THREE.Vector3(0,-0.3,0)); leftLower.group.position.set(0,-0.62,0); leftLower.mesh.castShadow=true;
-      leftUpper.group.add(leftLower.group);
-      const leftHand = new THREE.Mesh(new THREE.SphereGeometry(0.12,12,12), skin); leftHand.position.set(0,-0.6,0); leftHand.castShadow=true;
-      leftLower.group.add(leftHand); human.add(leftUpper.group);
-
-      const rightUpper = pivotedMesh(upperArmGeo, cloth, new THREE.Vector3(0,-0.31,0));
-      rightUpper.group.position.set(0.68,1.55,0); rightUpper.group.rotation.z = -Math.PI/12; rightUpper.mesh.castShadow=true;
-      const rightLower = pivotedMesh(lowerArmGeo, skin, new THREE.Vector3(0,-0.3,0)); rightLower.group.position.set(0,-0.62,0); rightLower.mesh.castShadow=true;
-      rightUpper.group.add(rightLower.group);
-      const rightHand = new THREE.Mesh(new THREE.SphereGeometry(0.12,12,12), skin); rightHand.position.set(0,-0.6,0); rightHand.castShadow=true;
-      rightLower.group.add(rightHand); human.add(rightUpper.group);
-
-      const pelvis = new THREE.Mesh(new THREE.SphereGeometry(0.32,16,16), pants); pelvis.position.set(0,0.55,0); pelvis.castShadow=true; human.add(pelvis);
-
-      const thighGeo = new THREE.CylinderGeometry(0.18,0.18,0.9,20);
-      const shinGeo = new THREE.CylinderGeometry(0.15,0.15,0.95,20);
-
-      const leftThigh = pivotedMesh(thighGeo, pants, new THREE.Vector3(0,-0.45,0));
-      leftThigh.group.position.set(-0.22,0.05,0); leftThigh.mesh.castShadow=true;
-      const leftShin = pivotedMesh(shinGeo, pants, new THREE.Vector3(0,-0.475,0)); leftShin.group.position.set(0,-0.9,0); leftShin.mesh.castShadow=true;
-      leftThigh.group.add(leftShin.group);
-      const leftFoot = new THREE.Mesh(new THREE.BoxGeometry(0.26,0.12,0.38), shoe); leftFoot.position.set(0,-0.6,0.08); leftFoot.castShadow=true;
-      leftShin.group.add(leftFoot); human.add(leftThigh.group);
-
-      const rightThigh = pivotedMesh(thighGeo, pants, new THREE.Vector3(0,-0.45,0));
-      rightThigh.group.position.set(0.22,0.05,0); rightThigh.mesh.castShadow=true;
-      const rightShin = pivotedMesh(shinGeo, pants, new THREE.Vector3(0,-0.475,0)); rightShin.group.position.set(0,-0.9,0); rightShin.mesh.castShadow=true;
-      rightThigh.group.add(rightShin.group);
-      const rightFoot = new THREE.Mesh(new THREE.BoxGeometry(0.26,0.12,0.38), shoe); rightFoot.position.set(0,-0.6,0.08); rightFoot.castShadow=true;
-      rightShin.group.add(rightFoot); human.add(rightThigh.group);
-
-      leftThigh.group.rotation.x = 0.06; rightThigh.group.rotation.x = -0.04;
-      leftUpper.group.rotation.z = 0.13; rightUpper.group.rotation.z = -0.13;
-
-      human.position.y = 0; human.scale.set(1,1,1); scene.add(human);
-
-      const rim = new THREE.PointLight(0xfff2e0, 0.12, 6); rim.position.set(0,2.4,-3); scene.add(rim);
-
-      // Resolve OrbitControls. We only display the error if it's truly missing or can't be instantiated.
-      const resolved = resolveOrbitControls();
-
-      // Clean tried list for human-readable diagnostics: only show entries that were meaningful (found=true or error strings)
-      const triedSummary = resolved.tried
-        .filter(t => (typeof t === 'object' && (t.found || (typeof t.found === 'string' && t.found))) || (typeof t === 'string' && t !== 'null' && t !== 'undefined'))
-        .map(t => (typeof t === 'object' ? `${t.name}: ${t.found}` : t))
-        .join('\n') || null;
-
-      if(!resolved.ctor){
-        // No constructor found -> show error once (but only if it seems like a real failure)
-        log('OrbitControls resolution failed. Tried (filtered):', triedSummary || 'no positive matches');
-        // show error message but keep it small and non-intrusive (hide after 6s)
-        showError('Could not find a usable OrbitControls constructor. The OrbitControls script may not export a constructor in the expected locations.', triedSummary || 'no positive matches');
-        setTimeout(hideError, 6000); // automatically hide after a short delay so that when it's actually working you don't see a persistent message
-        setupFallbackInteraction(renderer.domElement, camera);
-      } else {
-        // Good: we found a constructor. Hide any previous error UI, and proceed silently.
-        log('OrbitControls constructor found.');
-        hideError();
-
-        let ControlsCtor = resolved.ctor;
-        let controls;
-        try {
-          controls = new ControlsCtor(camera, renderer.domElement);
-        } catch (e1){
-          log('Primary constructor invocation failed:', e1.message || e1);
-          try {
-            controls = new ControlsCtor(renderer.domElement, camera);
-            log('Fallback constructor invocation (dom, camera) succeeded.');
-          } catch (e2){
-            log('All constructor attempts failed:', e2.message || e2);
-            showError('OrbitControls constructor was found but could not be instantiated. See console for details.', (e1.message||e1) + '\n' + (e2.message||e2));
-            setTimeout(hideError, 6000);
-            setupFallbackInteraction(renderer.domElement, camera);
-          }
+        
+        .mixer {
+            width: 400px;
+            margin: 40px auto;
+            background-color: #fff;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
         }
-
-        if(controls){
-          if(typeof controls.target !== 'undefined') controls.target.set(0, 1.1, 0);
-          if('enableDamping' in controls) controls.enableDamping = true;
-          if('dampingFactor' in controls) controls.dampingFactor = 0.07;
-          if('minDistance' in controls) controls.minDistance = 1.8;
-          if('maxDistance' in controls) controls.maxDistance = 12;
-          window._appControls = controls;
-          // If there were previous "null" lines in the log, remove them for clarity
-          // (we can't remove console.log entries, but we can make the on-screen log cleaner by trimming leading null lines)
-          cleanLeadingNullsFromLog();
+        
+        .color-picker {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
         }
-      }
-
-      // remove leading null/undefined-only lines from on-screen log to avoid the "null null..." noise users saw
-      function cleanLeadingNullsFromLog(){
-        const lines = logEl.textContent.split('\n');
-        let i = 0;
-        while(i < lines.length && (lines[i].trim() === 'null' || lines[i].trim() === 'undefined' || lines[i].trim() === '')) i++;
-        if(i > 0) {
-          const trimmed = lines.slice(i).join('\n');
-          logEl.textContent = trimmed;
+        
+        .color-picker select {
+            width: 45%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
         }
-      }
-
-      // fallback interaction (simple rotation + wheel zoom)
-      function setupFallbackInteraction(domEl, camera){
-        log('Setting up fallback interaction (mouse drag rotate, wheel zoom).');
-        let dragging = false, lastX=0, lastY=0, yaw=0, pitch=0;
-        domEl.style.touchAction = 'none';
-
-        domEl.addEventListener('pointerdown', (e)=>{
-          dragging = true; lastX = e.clientX; lastY = e.clientY;
-          try{ domEl.setPointerCapture(e.pointerId); } catch(_) {}
-        });
-        domEl.addEventListener('pointermove', (e)=>{
-          if(!dragging) return;
-          const dx = e.clientX - lastX; const dy = e.clientY - lastY;
-          lastX = e.clientX; lastY = e.clientY;
-          yaw -= dx * 0.005; pitch -= dy * 0.005;
-          pitch = Math.max(-Math.PI/2 + 0.1, Math.min(Math.PI/2 - 0.1, pitch));
-        });
-        domEl.addEventListener('pointerup', (e)=>{
-          dragging = false;
-          try{ domEl.releasePointerCapture(e.pointerId); } catch(_) {}
-        });
-        domEl.addEventListener('wheel', (e)=>{
-          e.preventDefault();
-          camera.position.z += e.deltaY * 0.01;
-          camera.position.z = Math.max(1.2, Math.min(20, camera.position.z));
-        }, { passive: false });
-
-        window._fallbackInteraction = {
-          update: ()=>{
-            camera.position.x = Math.sin(yaw) * 5 * Math.cos(pitch);
-            camera.position.y = Math.sin(pitch) * 3 + 1.6;
-            camera.position.z = Math.cos(yaw) * 5 * Math.cos(pitch);
-            camera.lookAt(0, 1.1, 0);
-          }
-        };
-      }
-
-      // animation loop
-      const clock = new THREE.Clock();
-      (function animate(){
-        const t = clock.getElapsedTime();
-        human.rotation.y = Math.sin(t * 0.25) * 0.03;
-        human.position.y = Math.sin(t * 0.6) * 0.01;
-        head.rotation.y = Math.sin(t * 0.8) * 0.02;
-        leftUpper.group.rotation.x = Math.cos(t * 1.1) * 0.06 + 0.02;
-        rightUpper.group.rotation.x = Math.cos(t * 1.1 + Math.PI) * 0.06 - 0.02;
-
-        const controls = window._appControls;
-        if(controls && typeof controls.update === 'function') controls.update();
-        if(window._fallbackInteraction && typeof window._fallbackInteraction.update === 'function') window._fallbackInteraction.update();
-
-        renderer.render(scene, camera);
-        requestAnimationFrame(animate);
-      })();
-
-      // responsive
-      window.addEventListener('resize', onResize);
-      function onResize(){
-        const w = container.clientWidth; const h = container.clientHeight;
-        camera.aspect = w / h; camera.updateProjectionMatrix(); renderer.setSize(w, h);
-      }
-      onResize();
-
-      log('Initialization complete. If OrbitControls are present they will be used silently. If not, a fallback interaction is active.');
-    })();
-  </script>
-</body>
-</html>
+        
+        .slider-container {
+            margin-bottom: 20px;
+        }
+        
+        .slider-container label {
+            display: block;
+            margin-bottom: 10px;
+        }
+        
+        .result {
+            margin-top: 20px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            background-color: #fff;
+        }
+        
+        .
